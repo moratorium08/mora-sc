@@ -2,46 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "linklist.h"
-
-typedef enum VariableType {
-    INTEGER_TYPE,
-    BOOLEAN_TYPE,
-} VariableType;
-
-typedef struct Variable {
-    VariableType type;
-    int x;
-} Variable;
-
-typedef struct Operation {
-
-} Operation;
-
-typedef struct LinkListAst {
-    struct Ast *ast;
-    struct LinkListAst *next;
-} LinkListAst;
-
-
-typedef struct Application {
-    Operation *op;
-    LinkListAst *linklist;
-} Application;
-
-typedef enum ASTType{
-    OPERATION_AST,
-    APPLY_AST,
-    PRIMITIVE_AST,
-} ASTType;
-
-typedef struct AST {
-    ASTType type;
-    union {
-        Variable *val;
-        Operation *op;
-        Application *ap;
-    };
-} AST;
+#include "ast.h"
 
 Variable *envs;
 int main(void) {
@@ -53,7 +14,7 @@ int main(void) {
 void parser(AST *ast, char *code) {
     int n = strlen(code);
     int i = 0;
-for (; i < n; i++) {
+    for (; i < n; i++) {
         char c = code[i];
         char *cur = "";
         char *tmp;
