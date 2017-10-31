@@ -1,4 +1,6 @@
 
+#ifndef VECTOR_INCLUDE
+#define VECTOR_INCLUDE
 typedef struct {
     int len;
     int **body;
@@ -13,3 +15,4 @@ void vector_put(Vector *v, int idx, void *item);
 void *vector_pop(Vector *v);
 void vector_push(Vector *v, void *item);
 void delete_vector(Vector *v);
+#endif

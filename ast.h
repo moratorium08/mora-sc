@@ -1,41 +1,54 @@
-typedef enum VariableType {
-    INTEGER_TYPE,
-    BOOLEAN_TYPE,
+#include "vector.h"
+
+typedef enum {
+    INTEGER_TYPE_VARIABLE,
+    BOOLEAN_TYPE_VARIABLE,
 } VariableType;
 
-typedef struct Variable {
+
+typedef struct {
     VariableType type;
+    int defined; // if defined this is set to 1
     int x;
+    char *identifier;
 } Variable;
 
-typedef struct Operation {
 
-} Operation;
-
-typedef struct LinkListAst {
-    struct Ast *ast;
-    struct LinkListAst *next;
-} LinkListAst;
+typedef enum {
+    INTEGER_TYPE_CONST,
+    BOOLEAN_TYPE_CONST,
+} ConstantType;
 
 
-typedef struct Application {
-    Operation *op;
-    LinkListAst *linklist;
+typedef struct {
+    ConstantType type;
+    union {
+        int integer_cnt;
+        int bool_cnt;
+    };
+} Constant;
+
+typedef struct {
+    Vector *asts; // Type Vector<Ast *>
 } Application;
 
 
-typedef enum ASTType{
-    OPERATION_AST,
+typedef enum {
     APPLY_AST,
-    PRIMITIVE_AST,
+    VARIABLE_AST,
+    CONSTANT_AST
 } ASTType;
 
 
-typedef struct Ast {
+typedef struct {
     ASTType type;
     union {
         Variable *val;
-        Operation *op;
+        Constant *cnt;
         Application *ap;
     };
 } Ast;
+
+Application *make_application();
+Ast *make_apply_ast();
+Ast *make_variable_ast(VariableType t, char *id);
