@@ -18,20 +18,44 @@ Ast *make_apply_ast() {
     return ast;
 }
 
-Variable *make_variable(VariableType t, char *id) {
+Variable *make_variable(char *id) {
     Variable *val = malloc(sizeof(Variable));
     memset(val, 0, sizeof(Variable));
     val->identifier = id;
-    val->type = t;
     val->defined = 0;
     return val;
 }
 
-Ast *make_variable_ast(VariableType t, char *id) {
+Ast *make_variable_ast(char *id) {
     Ast *ast;
     ast = malloc(sizeof(Ast));
     ast->type = VARIABLE_AST;
-    ast->val = make_variable(t, id);
+    ast->val = make_variable(id);
     return ast;
+}
+
+Ast *make_int_ast(int x) {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
+    Constant *cnt = malloc(sizeof(Constant));
+    cnt->type = INTEGER_TYPE_CONST;
+    cnt->integer_cnt = x;
+    ast->type = CONSTANT_AST;
+    ast->cnt = cnt;
+    return ast;
+}
+
+void print_constant(Constant *c) {
+    switch (c->type) {
+        case INTEGER_TYPE_CONST:
+            printf("%d", c->integer_cnt);
+            break;
+        case BOOLEAN_TYPE_CONST:
+            printf("#%c", c->bool_cnt == 1 ? 't' : 'f');
+            break;
+        case FUNCTION_TYPE_CONST:
+            printf("<function %p>", c->func);
+            break;
+    }
 }
 
