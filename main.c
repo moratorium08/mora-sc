@@ -4,14 +4,17 @@
 #include "linklist.h"
 #include "ast.h"
 
+void parser(Ast *ast, char *code);
+
 Variable *envs;
 int main(void) {
     char *s = "(+ 1 2)";
-
+    Ast *ast;
+    parser(ast, s);
     return 0;
 }
 
-void parser(AST *ast, char *code) {
+void parser(Ast *ast, char *code) {
     int n = strlen(code);
     int i = 0;
     for (; i < n; i++) {
@@ -44,6 +47,6 @@ void parser(AST *ast, char *code) {
 }
 
 void run(char *line) {
-	AST *ast;
+	Ast *ast;
     parser(ast, line);
 }

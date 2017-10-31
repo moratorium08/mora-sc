@@ -21,3 +21,18 @@ void Push(AstStack **list, Ast *new_ast) {
     (*list)->next = old_top;
 }
 
+void print_ast(Ast *ast) {
+    if (ast->type
+}
+
+void test() {
+    Ast ast;
+
+    Variable v;
+    v.type = INTEGER_TYPE;
+    v.x = 10;
+
+    ast.type = OPERATION_AST;
+    ast.val = &v;
+
+}
