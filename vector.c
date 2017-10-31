@@ -2,16 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "vector.h"
 
 void debug_info(char *s) {
     printf("[INFO]%s\n", s);
 }
-
-typedef struct {
-    int len;
-    int **body;
-    int cur_max;
-} Vector;
 
 int calculate_new_chunk_size(int len) {
     if (len == 0) {
@@ -83,6 +78,7 @@ void *vector_pop(Vector *v) {
     v->len--;
     return ret;
 }
+
 void vector_push(Vector *v, void *item) {
     append_vector(v, item);
 }
