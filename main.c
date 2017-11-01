@@ -18,7 +18,7 @@ Variable *envs;
 void run(char *line);
 
 int main(void) {
-    char *s = "(+ (+ 3 1) 2)";
+    char *s = "(quotient (* (+ 3 1) 2) 3)";
     run(s);
     return 0;
 }
@@ -209,10 +209,52 @@ Constant *builtin_add(Vector *items) {
     }
     return make_int_constant(c1->integer_cnt + c2->integer_cnt);
 }
+Constant *builtin_sub(Vector *items) {
+    if (items->len != 3) {
+        panic("-: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
+        panic("-: arguments must have Integer Type");
+    }
+    return make_int_constant(c1->integer_cnt - c2->integer_cnt);
+}
+Constant *builtin_mul(Vector *items) {
+    if (items->len != 3) {
+        panic("*: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
+        panic("*: arguments must have Integer Type");
+    }
+    return make_int_constant(c1->integer_cnt * c2->integer_cnt);
+}
+Constant *builtin_quotient(Vector *items) {
+    if (items->len != 3) {
+        panic("quotient: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
+        panic("quotient: arguments must have Integer Type");
+    }
+    return make_int_constant(c1->integer_cnt / c2->integer_cnt);
+}
 
 Constant *lookup_variable(Variable *v) {
-    if (strcpy(v->identifier, "+")) {
+    if (strcmp(v->identifier, "+") == 0) {
         return make_func_constant(&builtin_add, 2);
+    }
+    if (strcmp(v->identifier, "-") == 0) {
+        return make_func_constant(&builtin_sub, 2);
+    }
+    if (strcmp(v->identifier, "*") == 0) {
+        return make_func_constant(&builtin_mul, 2);
+    }
+    if (strcmp(v->identifier, "quotient") == 0) {
+        return make_func_constant(&builtin_quotient, 2);
     }
     else {
         panic("Ooops");
@@ -249,7 +291,9 @@ Constant* evaluate(Application *ap) {
 }
 
 void run(char *line) {
+    printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
     Constant *c = evaluate(ast->ap);
     print_constant(c);
+    puts("");
 }
