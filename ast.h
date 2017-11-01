@@ -62,4 +62,6 @@ Application *make_application();
 Ast *make_apply_ast();
 Ast *make_variable_ast(char *id);
 Ast *make_int_ast(int x);
+Constant *make_int_constant(int x);
+Constant *make_func_constant(SchemeFunc f, int argc);
 void print_constant(Constant *c);

@@ -18,7 +18,7 @@ Variable *envs;
 void run(char *line);
 
 int main(void) {
-    char *s = "(+ 1 2)";
+    char *s = "(+ (+ 3 1) 2)";
     run(s);
     return 0;
 }
@@ -198,6 +198,27 @@ Constant *execute(Vector *items) {
     return ret;
 }
 
+Constant *builtin_add(Vector *items) {
+    if (items->len != 3) {
+        panic("+: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
+        panic("+: arguments must have Integer Type");
+    }
+    return make_int_constant(c1->integer_cnt + c2->integer_cnt);
+}
+
+Constant *lookup_variable(Variable *v) {
+    if (strcpy(v->identifier, "+")) {
+        return make_func_constant(&builtin_add, 2);
+    }
+    else {
+        panic("Ooops");
+    }
+}
+
 Constant* evaluate(Application *ap) {
     int len = ap->asts->len;
     int i;
@@ -208,11 +229,17 @@ Constant* evaluate(Application *ap) {
         switch (ast->type) {
             case VARIABLE_AST:
                 // TODO: look up envs, locals
-                assert(1);
+                // printf("Variable Ast\n");
+                vector_push(items, lookup_variable(ast->val));
+                break;
             case CONSTANT_AST:
                 vector_push(items, ast->cnt);
+                // printf("Constant Ast\n");
+                break;
             case APPLY_AST:
                 vector_push(items, evaluate(ast->ap));
+                // printf("Apply Ast\n");
+                break;
             default:
                 panic("oops maybe not implmented");
         }
@@ -224,5 +251,5 @@ Constant* evaluate(Application *ap) {
 void run(char *line) {
 	Ast *ast = parser(line);
     Constant *c = evaluate(ast->ap);
-    //print_constant(c);
+    print_constant(c);
 }

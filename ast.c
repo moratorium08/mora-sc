@@ -34,14 +34,29 @@ Ast *make_variable_ast(char *id) {
     return ast;
 }
 
-Ast *make_int_ast(int x) {
-    Ast *ast;
-    ast = malloc(sizeof(Ast));
+Constant *make_int_constant(int x) {
     Constant *cnt = malloc(sizeof(Constant));
     cnt->type = INTEGER_TYPE_CONST;
     cnt->integer_cnt = x;
+    return cnt;
+}
+
+
+Constant *make_func_constant(SchemeFunc f, int argc) {
+    Constant *cnt = malloc(sizeof(Constant));
+    Function *func = malloc(sizeof(Function));
+    func->argc = argc;
+    func->func = f;
+    cnt->type = FUNCTION_TYPE_CONST;
+    cnt->func = func;
+    return cnt;
+}
+
+Ast *make_int_ast(int x) {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
     ast->type = CONSTANT_AST;
-    ast->cnt = cnt;
+    ast->cnt = make_int_constant(x);
     return ast;
 }
 
