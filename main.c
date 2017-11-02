@@ -5,28 +5,37 @@
 #include "linklist.h"
 #include "ast.h"
 #include "vector.h"
+#include "map.h"
 #include "util.h"
 
 Ast* parser(char *code);
+Constant* evaluate(Application *ap);
 
-void panic(char *s) {
+int ERROR_FLAG = 0;
+
+void error(char *s) {
     puts(s);
-    exit(-1);
+    ERROR_FLAG = 1;
+}
+void reset_error() {
+    ERROR_FLAG = 0;
 }
 
-Vector *envs;
+Map *global_variables;
 void run(char *line);
 
 int main(void) {
-    envs = make_vector(100);
-    char *s = "(quotient (* (+ 3 1) 2) 3)";
+    global_variables = make_map(100);
+    char *s = "(define x 3)";
+    run(s);
+    s = "(quotient (* (+ x 1) 2) 3)";
     run(s);
     return 0;
 }
 
 char *cut_string(char *code, int st, int ed) {
     if (st >= ed) {
-        panic("st >= ed is invalid");
+        error("st >= ed is invalid");
     }
     char *new_str = malloc(ed - st);
     memcpy(new_str, code + st, ed - st - 1);
@@ -124,19 +133,23 @@ int _dfs_application_from_token(Ast *ast, Vector *token_tree, int idx) {
                 idx++;
                 break;
             default:
-                panic("oops. invalid token.");
+                error("oops. invalid token.");
+                return -1;
         }
     }
-    panic("invalid syntax.");
+    error("invalid syntax.");
+    return -1;
 }
 
 Ast * create_ast_from_token_tree(Vector *token_tree) {
     if (token_tree->len == 0) {
-        panic("token tree size is zero.");
+        error("token tree size is zero.");
+        return NULL;
     }
     Token *head = vector_get(token_tree, 0);
     if (head->type != OPEN_BRACKET_TOKEN) {
-        panic("invalid syntax.");
+        error("invalid syntax.");
+        return NULL;
     }
     Ast *ast = make_apply_ast();
     _dfs_application_from_token(ast, token_tree, 1);
@@ -192,11 +205,13 @@ Ast * parser(char *code) {
 Constant *execute(Vector *items) {
     Constant *c = vector_get(items, 0);
     if (c->type != FUNCTION_TYPE_CONST) {
-        panic("non-functional value cannot be applied.");
+        error("non-functional value cannot be applied.");
+        return NULL;
     }
     Function *f = c->func;
     if (f->argc != (items->len - 1)) {
-        panic("invalid arguments");
+        error("invalid arguments");
+        return NULL;
     }
     SchemeFunc raw_func = f->func;
     Constant *ret = (raw_func)(items);
@@ -205,64 +220,79 @@ Constant *execute(Vector *items) {
 
 Constant *builtin_add(Vector *items) {
     if (items->len != 3) {
-        panic("+: invalid arguments.");
+        error("+: invalid arguments.");
     }
     Constant *c1 = vector_get(items, 1);
     Constant *c2 = vector_get(items, 2);
     if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
-        panic("+: arguments must have Integer Type");
+        error("+: arguments must have Integer Type");
     }
     return make_int_constant(c1->integer_cnt + c2->integer_cnt);
 }
 Constant *builtin_sub(Vector *items) {
     if (items->len != 3) {
-        panic("-: invalid arguments.");
+        error("-: invalid arguments.");
+        return NULL;
     }
     Constant *c1 = vector_get(items, 1);
     Constant *c2 = vector_get(items, 2);
     if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
-        panic("-: arguments must have Integer Type");
+        error("-: arguments must have Integer Type");
+        return NULL;
     }
     return make_int_constant(c1->integer_cnt - c2->integer_cnt);
 }
 Constant *builtin_mul(Vector *items) {
     if (items->len != 3) {
-        panic("*: invalid arguments.");
+        error("*: invalid arguments.");
     }
     Constant *c1 = vector_get(items, 1);
     Constant *c2 = vector_get(items, 2);
     if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
-        panic("*: arguments must have Integer Type");
+        error("*: arguments must have Integer Type");
     }
     return make_int_constant(c1->integer_cnt * c2->integer_cnt);
 }
 Constant *builtin_quotient(Vector *items) {
     if (items->len != 3) {
-        panic("quotient: invalid arguments.");
+        error("quotient: invalid arguments.");
     }
     Constant *c1 = vector_get(items, 1);
     Constant *c2 = vector_get(items, 2);
     if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
-        panic("quotient: arguments must have Integer Type");
+        error("quotient: arguments must have Integer Type");
     }
     return make_int_constant(c1->integer_cnt / c2->integer_cnt);
 }
 
 Constant *lookup_variable(Variable *v) {
+    Ast *gv = map_get(global_variables, v->identifier);
+    if (gv != NULL) {
+        switch (gv->type) {
+            case APPLY_AST:
+                return evaluate(gv->ap);
+            case CONSTANT_AST:
+                return gv->cnt;
+            case VARIABLE_AST:
+            case DEFINE_AST:
+                error("not implemented");
+        }
+    }
     if (strcmp(v->identifier, "+") == 0) {
-        return make_func_constant(&builtin_add, 2);
+        return make_func_constant_primitive(&builtin_add, 2);
     }
     if (strcmp(v->identifier, "-") == 0) {
-        return make_func_constant(&builtin_sub, 2);
+        return make_func_constant_primitive(&builtin_sub, 2);
     }
     if (strcmp(v->identifier, "*") == 0) {
-        return make_func_constant(&builtin_mul, 2);
+        return make_func_constant_primitive(&builtin_mul, 2);
     }
     if (strcmp(v->identifier, "quotient") == 0) {
-        return make_func_constant(&builtin_quotient, 2);
+        return make_func_constant_primitive(&builtin_quotient, 2);
     }
     else {
-        panic("Ooops");
+        error("Ooops");
+        return NULL;
     }
 }
 
@@ -288,7 +318,8 @@ Constant* evaluate(Application *ap) {
                 // printf("Apply Ast\n");
                 break;
             default:
-                panic("oops maybe not implmented");
+                error("oops maybe not implmented");
+                return NULL;
         }
     }
     Constant * ret = execute(items);
@@ -298,10 +329,44 @@ Constant* evaluate(Application *ap) {
 void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
-    Constant *c = evaluate(ast->ap);
     Ast *top = vector_get(ast->ap->asts, 0);
     if (top->type == DEFINE_AST) {
+        Ast *def_ast = vector_get(ast->ap->asts, 1);
+        if (def_ast->type == APPLY_AST) {
+            Vector *args = make_vector(def_ast->ap->asts->len - 1);
+            int i;
+            for (i = 1; i < def_ast->ap->asts->len; i++) {
+                Ast *ast = vector_get(def_ast->ap->asts, i);
+                if (ast->type != VARIABLE_AST) {
+                    error("illegal define source expression");
+                    return;
+                }
+                vector_push(args, ast->val);
+            }
+            Ast *ast = vector_get(def_ast->ap->asts, 0);
+            if (ast->type != VARIABLE_AST) {
+                error("illegal define source expression");
+                return;
+            }
+            Variable *v = ast->val;
+            v->type = FUNCTION_TYPE_VARIABLE;
+            v->names = args;
+            v->func = make_constructive_function(ast, args->len);
+            map_set(global_variables, v->identifier, v);
+        } else if (def_ast->type == VARIABLE_AST) {
+            if (ast->ap->asts->len != 3) {
+                error("define args are too much");
+                return;
+            }
+            map_set(global_variables, def_ast->val->identifier, vector_get(ast->ap->asts, 2));
+        } else {
+            error("illegal define statement");
+            return;
+        }
     }
-    print_constant(c);
-    puts("");
+    else {
+        Constant *c = evaluate(ast->ap);
+        print_constant(c);
+        puts("");
+    }
 }

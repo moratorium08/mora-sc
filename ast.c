@@ -50,9 +50,10 @@ Constant *make_int_constant(int x) {
 }
 
 
-Constant *make_func_constant(SchemeFunc f, int argc) {
+Constant *make_func_constant_primitive(SchemeFunc f, int argc) {
     Constant *cnt = malloc(sizeof(Constant));
     Function *func = malloc(sizeof(Function));
+    func->type = PRIMITIVE_FUNCTION;
     func->argc = argc;
     func->func = f;
     cnt->type = FUNCTION_TYPE_CONST;
@@ -82,3 +83,10 @@ void print_constant(Constant *c) {
     }
 }
 
+Function *make_constructive_function(Ast *ast, int argc) {
+    Function *func = malloc(sizeof(Function));
+    func->type = CONSTRUCTIVE_FUNCTION;
+    func->argc = argc;
+    func->ast = ast;
+    return func;
+}

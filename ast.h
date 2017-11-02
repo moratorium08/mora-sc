@@ -1,12 +1,22 @@
 #include "vector.h"
 
 typedef struct Constant Constant;
+typedef struct Ast Ast;
 
 typedef Constant *(*SchemeFunc)(Vector *);
 
+typedef enum {
+    PRIMITIVE_FUNCTION,
+    CONSTRUCTIVE_FUNCTION
+} FunctionType;
+
 typedef struct Function {
+    FunctionType type;
     int argc;
-    SchemeFunc func;
+    union {
+        SchemeFunc func;
+        Ast *ast;
+    };
 } Function;
 
 
@@ -55,20 +65,21 @@ typedef enum {
     DEFINE_AST
 } ASTType;
 
-typedef struct {
+struct Ast {
     ASTType type;
     union {
         Variable *val;
         Constant *cnt;
         Application *ap;
     };
-} Ast;
+};
 
 Application *make_application();
 Ast *make_apply_ast();
 Ast *make_variable_ast(char *id);
 Ast *make_int_ast(int x);
 Ast *make_define_ast();
+Function *make_constructive_function(Ast *ast, int argc);
 Constant *make_int_constant(int x);
-Constant *make_func_constant(SchemeFunc f, int argc);
+Constant *make_func_constant_primitive(SchemeFunc f, int argc);
 void print_constant(Constant *c);

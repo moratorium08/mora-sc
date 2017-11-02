@@ -30,8 +30,11 @@ void map_set(Map *map, char *key, void *item) {
             return;
         }
     }
-    vector_push(map->keys, key);
+    char *cpd_key = malloc(strlen(key) + 1);
+    strcpy(cpd_key, key);
+    vector_push(map->keys, cpd_key);
     vector_push(map->items, item);
+    map->len++;
 }
 
 void *map_get(Map *map, char *key) {
@@ -43,4 +46,13 @@ void *map_get(Map *map, char *key) {
         }
     }
     return NULL;
+}
+
+int test(void) {
+    Map *m = make_map(10);
+    map_set(m, "apple", "りんご");
+    map_set(m, "orange", "オレンジ");
+    printf("%s\n", map_get(m, "apple"));
+    printf("%s\n", map_get(m, "orange"));
+    return 0;
 }
