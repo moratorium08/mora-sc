@@ -10,6 +10,14 @@ Application *make_application() {
     return ap;
 }
 
+Ast *make_define_ast() {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
+    memset(ast, 0, sizeof(Ast));
+    ast->type = DEFINE_AST;
+    return ast;
+}
+
 Ast *make_apply_ast() {
     Ast *ast;
     ast = malloc(sizeof(Ast));

@@ -14,10 +14,11 @@ void panic(char *s) {
     exit(-1);
 }
 
-Variable *envs;
+Vector *envs;
 void run(char *line);
 
 int main(void) {
+    envs = make_vector(100);
     char *s = "(quotient (* (+ 3 1) 2) 3)";
     run(s);
     return 0;
@@ -93,6 +94,10 @@ Ast *handle_string_token(Token *token) {
         // TODO: オーバーフローを全く考慮していない
         // そもそもSchemeは規格として多倍長
         Ast *ast = make_int_ast(atoi(token->raw));
+        return ast;
+    }
+    if (strcmp("define", token->raw) == 0) {
+        Ast *ast = make_define_ast();
         return ast;
     }
     char *name = dup_str(token->raw);
@@ -294,6 +299,9 @@ void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
     Constant *c = evaluate(ast->ap);
+    Ast *top = vector_get(ast->ap->asts, 0);
+    if (top->type == DEFINE_AST) {
+    }
     print_constant(c);
     puts("");
 }

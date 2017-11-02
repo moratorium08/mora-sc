@@ -1,6 +1,8 @@
 #include "vector.h"
 
-typedef struct Constant *(*SchemeFunc)(Vector *);
+typedef struct Constant Constant;
+
+typedef Constant *(*SchemeFunc)(Vector *);
 
 typedef struct Function {
     int argc;
@@ -20,7 +22,10 @@ typedef struct {
     char *identifier;
     union {
         int val;
-        Function *func;
+        struct {
+            Function *func;
+            Vector *names;
+        };
     };
 } Variable;
 
@@ -30,14 +35,14 @@ typedef enum {
     FUNCTION_TYPE_CONST,
 } ConstantType;
 
-typedef struct {
+struct Constant {
     ConstantType type;
     union {
         int integer_cnt;
         int bool_cnt;
         Function *func;
     };
-} Constant;
+};
 
 typedef struct {
     Vector *asts; // Type Vector<Ast *>
@@ -46,7 +51,8 @@ typedef struct {
 typedef enum {
     APPLY_AST,
     VARIABLE_AST,
-    CONSTANT_AST
+    CONSTANT_AST,
+    DEFINE_AST
 } ASTType;
 
 typedef struct {
@@ -62,6 +68,7 @@ Application *make_application();
 Ast *make_apply_ast();
 Ast *make_variable_ast(char *id);
 Ast *make_int_ast(int x);
+Ast *make_define_ast();
 Constant *make_int_constant(int x);
 Constant *make_func_constant(SchemeFunc f, int argc);
 void print_constant(Constant *c);
