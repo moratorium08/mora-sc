@@ -10,6 +10,8 @@
 
 Ast* parser(char *code);
 Constant* evaluate(Application *ap);
+int start_scope(Vector *tuples);
+void end_scope();
 
 int ERROR_FLAG = 0;
 
@@ -25,6 +27,18 @@ Map *global_variables; // type: Map<Ast*>
 Vector *local_variables; // type: Vector<Map<Ast*>>
 void run(char *line);
 
+void print_globals() {
+    int i;
+    int n = global_variables->len;
+    for (i = 0; i < n; i++) {
+        char *key = vector_get(global_variables->keys, i);
+        printf("** %s **\n", key);
+        print_ast(map_get(global_variables, key), 0);
+    }
+
+
+}
+
 int main(void) {
     global_variables = make_map(100);
     local_variables = make_vector(100);
@@ -34,6 +48,10 @@ int main(void) {
     s = "(let ((x 3)) (quotient (* (+ x 1) 2) 3))";
     run(s);
     s = "(* x (let ((x 5)) x))";
+    run(s);
+    s = "(define (f x) (+ x 2))";
+    run(s);
+    s = "(f 5)";
     run(s);
     return 0;
 }
@@ -207,6 +225,32 @@ Ast * parser(char *code) {
     return create_ast_from_token_tree(token_tree);
 }
 
+// this is so dirty...
+Vector *_zip_vectors(Vector *names, Vector *items) {
+    int n = names->len;
+    int i;
+    if (items->len - 1 != names->len) {
+        error("invalid arguments");
+        return NULL;
+    }
+    Vector *v = make_vector(names->len);
+    for (i = 0; i < n; i++) {
+        Ast *ast = make_apply_ast();
+        Vector *tup = ast->ap->asts;
+
+        Variable *val = vector_get(names, i);
+        Ast *val_ast = make_ast_from_variable(val);
+        Constant *item = vector_get(items, i + 1);
+        Ast *item_ast = make_constant_ast(item);
+        vector_push(tup, val_ast);
+        vector_push(tup, item_ast);
+
+        vector_push(v, ast);
+    }
+    return v;
+}
+
+// Vector <Constant *>
 Constant *execute(Vector *items) {
     Constant *c = vector_get(items, 0);
     if (c->type != FUNCTION_TYPE_CONST) {
@@ -223,7 +267,20 @@ Constant *execute(Vector *items) {
         Constant *ret = (raw_func)(items);
         return ret;
     } else if (f->type == CONSTRUCTIVE_FUNCTION) {
-        // let
+        if (f->ast->type != APPLY_AST) {
+            error("non-functionla value cannot be applied.");
+            return NULL;
+        }
+        Vector *arg_names = f->names;
+        int i;
+        Vector *tuples = _zip_vectors(arg_names, items);
+
+        start_scope(tuples);
+        Constant *ret;
+        ret = evaluate(f->ast->ap);
+        end_scope();
+
+        return ret;
     }
     error("not implmented");
     return NULL;
@@ -289,6 +346,11 @@ Constant *lookup_variable(Variable *v) {
                 case CONSTANT_AST:
                     return ast->cnt;
                 case VARIABLE_AST:
+                    if (ast->val->type != FUNCTION_TYPE_VARIABLE) {
+                        error("not implemented");
+                        return NULL;
+                    }
+                    return make_func_constant(ast->val->func);
                 case DEFINE_AST:
                     error("not implemented");
                     return NULL;
@@ -304,6 +366,11 @@ Constant *lookup_variable(Variable *v) {
             case CONSTANT_AST:
                 return gv->cnt;
             case VARIABLE_AST:
+                if (gv->val->type != FUNCTION_TYPE_VARIABLE) {
+                    error("not implemented");
+                    return NULL;
+                }
+                return make_func_constant(gv->val->func);
             case DEFINE_AST:
                 error("not implemented");
                 return NULL;
@@ -328,6 +395,48 @@ Constant *lookup_variable(Variable *v) {
     }
 }
 
+// tuples: Vector<Ast *>
+// This Ast must have APPLY_AST type
+int start_scope(Vector *tuples) {
+    Map *new_scope = make_map(tuples->len);
+    int i;
+    for (i = 0; i < tuples->len; i++) {
+        Ast *tuple = vector_get(tuples, i);
+        if (tuple->type != APPLY_AST || tuple->ap->asts->len != 2) {
+            error("illegal let");
+            return -1;
+        }
+        Ast *name = vector_get(tuple->ap->asts, 0);
+        Ast *val = vector_get(tuple->ap->asts, 1);
+        if (name->type != VARIABLE_AST) {
+            error("illegal let");
+            return -1;
+        }
+
+        Constant *c;
+        switch(val->type) {
+            case CONSTANT_AST:
+                c = val->cnt;
+                break;
+            case VARIABLE_AST:
+                c = lookup_variable(val->val);
+                break;
+            case APPLY_AST:
+                c = evaluate(val->ap);
+                break;
+            case DEFINE_AST:
+                error("illegal let");
+                return -1;
+        }
+        map_set(new_scope, name->val->identifier, make_constant_ast(c));
+    }
+    vector_push(local_variables, new_scope);
+    return 1;
+}
+void end_scope() {
+    vector_pop(local_variables);
+}
+
 Constant* evaluate(Application *ap) {
     int len = ap->asts->len;
     int i;
@@ -344,38 +453,8 @@ Constant* evaluate(Application *ap) {
             return NULL;
         }
         Vector *tuples = tuple_ast->ap->asts;
-        Map *new_scope = make_map(tuples->len);
-        for (i = 0; i < tuples->len; i++) {
-            Ast *tuple = vector_get(tuples, i);
-            if (tuple->type != APPLY_AST || tuple->ap->asts->len != 2) {
-                error("illegal let");
-                return NULL;
-            }
-            Ast *name = vector_get(tuple->ap->asts, 0);
-            Ast *val = vector_get(tuple->ap->asts, 1);
-            if (name->type != VARIABLE_AST) {
-                error("illegal let");
-                return NULL;
-            }
 
-            Constant *c;
-            switch(val->type) {
-                case CONSTANT_AST:
-                    c = val->cnt;
-                    break;
-                case VARIABLE_AST:
-                    c = lookup_variable(val->val);
-                    break;
-                case APPLY_AST:
-                    c = evaluate(val->ap);
-                    break;
-                case DEFINE_AST:
-                    error("illegal let");
-                    return NULL;
-            }
-            map_set(new_scope, name->val->identifier, make_constant_ast(c));
-        }
-        vector_push(local_variables, new_scope);
+        start_scope(tuples);
         Constant *ret;
         for (i = 2; i < ap->asts->len; i++) {
             Ast *ast = vector_get(ap->asts, i);
@@ -394,7 +473,7 @@ Constant* evaluate(Application *ap) {
                     return NULL;
             }
         }
-        vector_pop(local_variables);
+        end_scope();
         return ret;
     }
 
@@ -404,16 +483,13 @@ Constant* evaluate(Application *ap) {
         switch (ast->type) {
             case VARIABLE_AST:
                 // TODO: look up envs, locals
-                // printf("Variable Ast\n");
                 vector_push(items, lookup_variable(ast->val));
                 break;
             case CONSTANT_AST:
                 vector_push(items, ast->cnt);
-                // printf("Constant Ast\n");
                 break;
             case APPLY_AST:
                 vector_push(items, evaluate(ast->ap));
-                // printf("Apply Ast\n");
                 break;
             default:
                 error("oops maybe not implmented");
@@ -431,8 +507,11 @@ void run(char *line) {
     if (top->type == DEFINE_AST) {
         Ast *def_ast = vector_get(ast->ap->asts, 1);
         if (def_ast->type == APPLY_AST) {
+
+            // Vector<Variable *>
             Vector *args = make_vector(def_ast->ap->asts->len - 1);
             int i;
+            // (f x1 x2 .. xn) => iterate 1 to n
             for (i = 1; i < def_ast->ap->asts->len; i++) {
                 Ast *ast = vector_get(def_ast->ap->asts, i);
                 if (ast->type != VARIABLE_AST) {
@@ -441,16 +520,20 @@ void run(char *line) {
                 }
                 vector_push(args, ast->val);
             }
-            Ast *ast = vector_get(def_ast->ap->asts, 0);
-            if (ast->type != VARIABLE_AST) {
+            Ast *func_name_ast = vector_get(def_ast->ap->asts, 0);
+            if (func_name_ast->type != VARIABLE_AST) {
                 error("illegal define source expression");
                 return;
             }
-            Variable *v = ast->val;
+
+            Variable *v = func_name_ast->val;
             v->type = FUNCTION_TYPE_VARIABLE;
-            v->names = args;
-            v->func = make_constructive_function(ast, args->len);
-            map_set(global_variables, v->identifier, v);
+
+            Ast *content = vector_get(ast->ap->asts, 2);
+            v->func = make_constructive_function(content, args);
+            Ast *val_ast = make_ast_from_variable(v);
+
+            map_set(global_variables, v->identifier, val_ast);
         } else if (def_ast->type == VARIABLE_AST) {
             if (ast->ap->asts->len != 3) {
                 error("define args are too much");

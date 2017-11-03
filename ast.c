@@ -42,6 +42,14 @@ Ast *make_variable_ast(char *id) {
     return ast;
 }
 
+Ast *make_ast_from_variable(Variable *v) {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
+    ast->type = VARIABLE_AST;
+    ast->val = v;
+    return ast;
+}
+
 Constant *make_int_constant(int x) {
     Constant *cnt = malloc(sizeof(Constant));
     cnt->type = INTEGER_TYPE_CONST;
@@ -90,10 +98,59 @@ void print_constant(Constant *c) {
     }
 }
 
-Function *make_constructive_function(Ast *ast, int argc) {
+Function *make_constructive_function(Ast *ast, Vector* args) {
     Function *func = malloc(sizeof(Function));
     func->type = CONSTRUCTIVE_FUNCTION;
-    func->argc = argc;
+    func->argc = args->len;
     func->ast = ast;
+    func->names = args;
     return func;
 }
+
+Constant *make_func_constant(Function *f) {
+    Constant *c = malloc(sizeof(Constant));
+    c->type = FUNCTION_TYPE_CONST;
+    c->func = f;
+    return c;
+}
+
+void print_spaces(int x) {
+    int i = 0;
+    for (;i < x; i++) {
+        printf(" ");
+    }
+}
+
+void print_ast(Ast *ast, int indent) {
+    int i;
+    Variable *v;
+    switch(ast->type) {
+        case APPLY_AST:
+            print_spaces(indent);
+            printf("(\n");
+            for(i = 0; i < ast->ap->asts->len; i++) {
+                print_ast(vector_get(ast->ap->asts, i), indent + 1);
+            }
+            print_spaces(indent);
+            printf(")\n");
+            break;
+        case VARIABLE_AST:
+            v = ast->val;
+            print_spaces(indent);
+            printf("Val:%s: %d\n", ast->val->identifier, ast->val->type);
+            if (v->type == FUNCTION_TYPE_VARIABLE) {
+                print_ast(v->func->ast, indent + 1);
+            }
+            break;
+        case CONSTANT_AST:
+            print_spaces(indent);
+            print_constant(ast->cnt);
+            printf("\n");
+            break;
+        case DEFINE_AST:
+            print_spaces(indent);
+            printf("[define] \n");
+            break;
+    }
+}
+

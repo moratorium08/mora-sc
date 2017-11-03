@@ -15,7 +15,10 @@ typedef struct Function {
     int argc;
     union {
         SchemeFunc func;
-        Ast *ast;
+        struct {
+            Ast *ast;
+            Vector *names; //Vector<Variable*>
+        };
     };
 } Function;
 
@@ -32,10 +35,7 @@ typedef struct {
     char *identifier;
     union {
         int val;
-        struct {
-            Function *func;
-            Vector *names;
-        };
+        Function *func;
     };
 } Variable;
 
@@ -80,7 +80,10 @@ Ast *make_variable_ast(char *id);
 Ast *make_int_ast(int x);
 Ast *make_define_ast();
 Ast *make_constant_ast(Constant *c);
-Function *make_constructive_function(Ast *ast, int argc);
+Ast *make_ast_from_variable(Variable *v);
+Function *make_constructive_function(Ast *ast, Vector * args);
 Constant *make_int_constant(int x);
+Constant *make_func_constant(Function *f);
 Constant *make_func_constant_primitive(SchemeFunc f, int argc);
 void print_constant(Constant *c);
+void print_ast(Ast *ast, int indent);
