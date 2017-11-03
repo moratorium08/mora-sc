@@ -79,6 +79,7 @@ Ast *make_apply_ast();
 Ast *make_variable_ast(char *id);
 Ast *make_int_ast(int x);
 Ast *make_define_ast();
+Ast *make_constant_ast(Constant *c);
 Function *make_constructive_function(Ast *ast, int argc);
 Constant *make_int_constant(int x);
 Constant *make_func_constant_primitive(SchemeFunc f, int argc);

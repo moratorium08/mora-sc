@@ -68,6 +68,13 @@ Ast *make_int_ast(int x) {
     ast->cnt = make_int_constant(x);
     return ast;
 }
+Ast *make_constant_ast(Constant *c) {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
+    ast->type = CONSTANT_AST;
+    ast->cnt = c;
+    return ast;
+}
 
 void print_constant(Constant *c) {
     switch (c->type) {

@@ -21,14 +21,19 @@ void reset_error() {
     ERROR_FLAG = 0;
 }
 
-Map *global_variables;
+Map *global_variables; // type: Map<Ast*>
+Vector *local_variables; // type: Vector<Map<Ast*>>
 void run(char *line);
 
 int main(void) {
     global_variables = make_map(100);
-    char *s = "(define x 3)";
+    local_variables = make_vector(100);
+    //char *s = "(define x 3)";
+    char *s = "(define x 2)";
     run(s);
-    s = "(quotient (* (+ x 1) 2) 3)";
+    s = "(let ((x 3)) (quotient (* (+ x 1) 2) 3))";
+    run(s);
+    s = "(* x (let ((x 5)) x))";
     run(s);
     return 0;
 }
@@ -213,9 +218,15 @@ Constant *execute(Vector *items) {
         error("invalid arguments");
         return NULL;
     }
-    SchemeFunc raw_func = f->func;
-    Constant *ret = (raw_func)(items);
-    return ret;
+    if (f->type == PRIMITIVE_FUNCTION) {
+        SchemeFunc raw_func = f->func;
+        Constant *ret = (raw_func)(items);
+        return ret;
+    } else if (f->type == CONSTRUCTIVE_FUNCTION) {
+        // let
+    }
+    error("not implmented");
+    return NULL;
 }
 
 Constant *builtin_add(Vector *items) {
@@ -266,6 +277,25 @@ Constant *builtin_quotient(Vector *items) {
 }
 
 Constant *lookup_variable(Variable *v) {
+    // lookup let scopes
+    int i = local_variables->len - 1;
+    for (; i >= 0; i--) {
+        Map *m = vector_get(local_variables, i);
+        Ast *ast = map_get(m, v->identifier);
+        if (ast != NULL) {
+            switch (ast->type) {
+                case APPLY_AST:
+                    return evaluate(ast->ap);
+                case CONSTANT_AST:
+                    return ast->cnt;
+                case VARIABLE_AST:
+                case DEFINE_AST:
+                    error("not implemented");
+                    return NULL;
+            }
+        }
+    }
+    // global variable
     Ast *gv = map_get(global_variables, v->identifier);
     if (gv != NULL) {
         switch (gv->type) {
@@ -276,8 +306,10 @@ Constant *lookup_variable(Variable *v) {
             case VARIABLE_AST:
             case DEFINE_AST:
                 error("not implemented");
+                return NULL;
         }
     }
+
     if (strcmp(v->identifier, "+") == 0) {
         return make_func_constant_primitive(&builtin_add, 2);
     }
@@ -299,6 +331,72 @@ Constant *lookup_variable(Variable *v) {
 Constant* evaluate(Application *ap) {
     int len = ap->asts->len;
     int i;
+    Ast *top = vector_get(ap->asts, 0);
+    if (top->type == VARIABLE_AST && strcmp(top->val->identifier, "let") == 0) {
+        // handling let
+        if (ap->asts->len < 2) {
+            error("let must have not less than 2 args");
+            return NULL;
+        }
+        Ast *tuple_ast = vector_get(ap->asts, 1);
+        if (tuple_ast->type != APPLY_AST) {
+            error("illegal let");
+            return NULL;
+        }
+        Vector *tuples = tuple_ast->ap->asts;
+        Map *new_scope = make_map(tuples->len);
+        for (i = 0; i < tuples->len; i++) {
+            Ast *tuple = vector_get(tuples, i);
+            if (tuple->type != APPLY_AST || tuple->ap->asts->len != 2) {
+                error("illegal let");
+                return NULL;
+            }
+            Ast *name = vector_get(tuple->ap->asts, 0);
+            Ast *val = vector_get(tuple->ap->asts, 1);
+            if (name->type != VARIABLE_AST) {
+                error("illegal let");
+                return NULL;
+            }
+
+            Constant *c;
+            switch(val->type) {
+                case CONSTANT_AST:
+                    c = val->cnt;
+                    break;
+                case VARIABLE_AST:
+                    c = lookup_variable(val->val);
+                    break;
+                case APPLY_AST:
+                    c = evaluate(val->ap);
+                    break;
+                case DEFINE_AST:
+                    error("illegal let");
+                    return NULL;
+            }
+            map_set(new_scope, name->val->identifier, make_constant_ast(c));
+        }
+        vector_push(local_variables, new_scope);
+        Constant *ret;
+        for (i = 2; i < ap->asts->len; i++) {
+            Ast *ast = vector_get(ap->asts, i);
+            switch (ast->type) {
+                case VARIABLE_AST:
+                    ret = lookup_variable(ast->val);
+                    break;
+                case CONSTANT_AST:
+                    ret = ast->cnt;
+                    break;
+                case APPLY_AST:
+                    ret = evaluate(ast->ap);
+                    break;
+                case DEFINE_AST:
+                    error("define cannot be in such place");
+                    return NULL;
+            }
+        }
+        vector_pop(local_variables);
+        return ret;
+    }
 
     Vector *items = make_vector(8);
     for (i = 0; i < len; i++) {
