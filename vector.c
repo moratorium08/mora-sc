@@ -86,20 +86,3 @@ void vector_push(Vector *v, void *item) {
 void delete_vector(Vector *v) {
     // TODO
 }
-
-int test_vectors(void) {
-    Vector *v = make_vector(10);
-    append_vector(v, "hello");
-    append_vector(v, "world");
-    for (int i = 0; i < 2; i++) {
-        printf("%s\n", vector_get(v, i));
-    }
-
-    vector_pop(v);
-    vector_push(v, "nemui");
-    vector_push(v, "golang");
-    for (int i = 0; i < v->len; i++) {
-        printf("%s\n", vector_get(v, i));
-    }
-    return 0;
-}
