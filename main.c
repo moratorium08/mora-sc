@@ -66,7 +66,7 @@ int main(void) {
     run("(define a 0)");
     run("(define (f x) (+ x a))");
     run("(let ((a 1)) (f 0))");
-    run("(if 1 2 3)");
+    run("(if #f 2 3)");
     return 0;
 }
 
@@ -135,11 +135,23 @@ int is_number(char *s) {
     return flag;
 }
 
+int is_boolean(char *s) {
+    int n = strlen(s);
+    if (n != 2) {
+        return 0;
+    }
+    return s[0] == '#' && (s[1] == 't' || s[1] == 'f');
+}
+
 Ast *handle_string_token(Token *token) {
     if (is_number(token->raw) == 1) {
         // TODO: オーバーフローを全く考慮していない
         // そもそもSchemeは規格として多倍長
         Ast *ast = make_int_ast(atoi(token->raw));
+        return ast;
+    }
+    if (is_boolean(token->raw)) {
+        Ast *ast = make_boolean_ast(token->raw[1] == 't');
         return ast;
     }
     if (strcmp("define", token->raw) == 0) {
@@ -154,7 +166,6 @@ Ast *handle_string_token(Token *token) {
     Ast *ast = make_variable_ast(token->raw);
     return ast;
 }
-
 
 int _dfs_application_from_token(Ast *ast, Vector *token_tree, int idx) {
     while (idx < token_tree->len) {

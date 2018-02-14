@@ -65,6 +65,12 @@ Constant *make_int_constant(int x) {
     return cnt;
 }
 
+Constant *make_boolean_constant(int b) {
+    Constant *cnt = malloc(sizeof(Constant));
+    cnt->type = BOOLEAN_TYPE_CONST;
+    cnt->bool_cnt = b;
+    return cnt;
+}
 
 Constant *make_func_constant_primitive(SchemeFunc f, int argc) {
     Constant *cnt = malloc(sizeof(Constant));
@@ -76,6 +82,14 @@ Constant *make_func_constant_primitive(SchemeFunc f, int argc) {
     cnt->type = FUNCTION_TYPE_CONST;
     cnt->func = func;
     return cnt;
+}
+
+Ast *make_boolean_ast(int b) {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
+    ast->type = CONSTANT_AST;
+    ast->cnt = make_boolean_constant(b);
+    return ast;
 }
 
 Ast *make_int_ast(int x) {
