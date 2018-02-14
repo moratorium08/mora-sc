@@ -61,6 +61,7 @@ Constant *make_int_constant(int x) {
 Constant *make_func_constant_primitive(SchemeFunc f, int argc) {
     Constant *cnt = malloc(sizeof(Constant));
     Function *func = malloc(sizeof(Function));
+    func->env = make_vector(0);
     func->type = PRIMITIVE_FUNCTION;
     func->argc = argc;
     func->func = f;
@@ -98,9 +99,10 @@ void print_constant(Constant *c) {
     }
 }
 
-Function *make_constructive_function(Ast *ast, Vector* args) {
+Function *make_constructive_function(Ast *ast, Vector* args, Vector *env) {
     Function *func = malloc(sizeof(Function));
     func->type = CONSTRUCTIVE_FUNCTION;
+    func->env = copy_vector(env);
     func->argc = args->len;
     func->ast = ast;
     func->names = args;
@@ -116,12 +118,12 @@ Constant *make_func_constant(Function *f) {
 }
 
 // items ex: (lambda (x y) (+ x y))
-Constant *make_lambda_constant(Ast *ast, Vector *args) {
+Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env) {
     Constant *c = malloc(sizeof(Constant));
     c->type = FUNCTION_TYPE_CONST;
     Function *func = malloc(sizeof(Function));
-
     func->type = LAMBDA_FUNCTION;
+    func->env = copy_vector(env);
     func->argc = args->len;
     func->lam_ast = ast;
     func->names = args;

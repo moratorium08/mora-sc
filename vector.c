@@ -30,6 +30,16 @@ Vector *make_vector(int size) {
     return v;
 }
 
+Vector *copy_vector(Vector *vec) {
+    Vector *v = make_vector(vec->len);
+    int i = 0;
+    for (; i < vec->len; i++) {
+        void *item = vector_get(vec, i);
+        vector_push(v, item);
+    }
+    return v;
+}
+
 int extend_vector(Vector *v, int add_size) {
     void *new_body = malloc(v->cur_max + add_size);
     if (new_body == NULL) {

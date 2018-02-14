@@ -8,6 +8,7 @@ typedef struct {
 } Vector;
 
 Vector *make_vector(int size);
+Vector *copy_vector(Vector *v);
 int extend_vector(Vector *v, int add_size);
 int append_vector(Vector *v, void *item);
 void *vector_get(Vector *v, int idx);

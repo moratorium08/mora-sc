@@ -15,6 +15,7 @@ typedef enum {
 typedef struct Function {
     FunctionType type;
     int argc;
+    Vector *env; // Vector<Map<Ast*>>
     union {
         SchemeFunc func;
         struct {
@@ -90,10 +91,10 @@ Ast *make_int_ast(int x);
 Ast *make_define_ast();
 Ast *make_constant_ast(Constant *c);
 Ast *make_ast_from_variable(Variable *v);
-Function *make_constructive_function(Ast *ast, Vector * args);
+Function *make_constructive_function(Ast *ast, Vector * args, Vector *env);
 Constant *make_int_constant(int x);
 Constant *make_func_constant(Function *f);
 Constant *make_func_constant_primitive(SchemeFunc f, int argc);
-Constant *make_lambda_constant(Ast *ast, Vector *args);
+Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env);
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);
