@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "linklist.h"
 #include "ast.h"
 #include "vector.h"
 #include "map.h"
@@ -44,6 +43,10 @@ int main(void) {
     local_variables = make_vector(100);
     //char *s = "(define x 3)";
     char *s = "(define x 2)";
+    run(s);
+    s = "x";
+    run(s);
+    s = "1";
     run(s);
     s = "(let ((x 3)) (quotient (* (+ x 1) 2) 3))";
     run(s);
@@ -170,7 +173,10 @@ Ast * create_ast_from_token_tree(Vector *token_tree) {
         return NULL;
     }
     Token *head = vector_get(token_tree, 0);
-    if (head->type != OPEN_BRACKET_TOKEN) {
+    if (head->type == STR_TOKEN && token_tree->len == 1) {
+        return handle_string_token(head);
+    }
+    else if (head->type != OPEN_BRACKET_TOKEN) {
         error("invalid syntax.");
         return NULL;
     }
@@ -221,6 +227,11 @@ Ast * parser(char *code) {
             default:
                 break;
         }
+    }
+    if (st != n) {
+        char *tmp = cut_string(code, st, n+1);
+        Token *token = create_str_token(tmp);
+        vector_push(token_tree, token);
     }
     return create_ast_from_token_tree(token_tree);
 }
@@ -503,6 +514,17 @@ Constant* evaluate(Application *ap) {
 void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
+    if (ast->type == VARIABLE_AST) {
+        Constant *c = lookup_variable(ast->val);
+        print_constant(c);
+        puts("");
+        return;
+    } else if (ast->type == CONSTANT_AST) {
+        print_constant(ast->cnt);
+        puts("");
+        return;
+    }
+
     Ast *top = vector_get(ast->ap->asts, 0);
     if (top->type == DEFINE_AST) {
         Ast *def_ast = vector_get(ast->ap->asts, 1);
