@@ -18,6 +18,14 @@ Ast *make_define_ast() {
     return ast;
 }
 
+Ast *make_if_ast() {
+    Ast *ast;
+    ast = malloc(sizeof(Ast));
+    memset(ast, 0, sizeof(Ast));
+    ast->type = IF_AST;
+    return ast;
+}
+
 Ast *make_apply_ast() {
     Ast *ast;
     ast = malloc(sizeof(Ast));
@@ -167,6 +175,10 @@ void print_ast(Ast *ast, int indent) {
         case DEFINE_AST:
             print_spaces(indent);
             printf("[define] \n");
+            break;
+        case IF_AST:
+            print_spaces(indent);
+            printf("[if] \n");
             break;
     }
 }

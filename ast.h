@@ -72,7 +72,8 @@ typedef enum {
     APPLY_AST,
     VARIABLE_AST,
     CONSTANT_AST,
-    DEFINE_AST
+    DEFINE_AST,
+    IF_AST
 } ASTType;
 
 struct Ast {
@@ -89,6 +90,7 @@ Ast *make_apply_ast();
 Ast *make_variable_ast(char *id);
 Ast *make_int_ast(int x);
 Ast *make_define_ast();
+Ast *make_if_ast();
 Ast *make_constant_ast(Constant *c);
 Ast *make_ast_from_variable(Variable *v);
 Function *make_constructive_function(Ast *ast, Vector * args, Vector *env);

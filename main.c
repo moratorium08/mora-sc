@@ -9,6 +9,7 @@
 
 Ast* parser(char *code);
 Constant* evaluate(Application *ap, Vector *env);
+Constant* eval_ast(Ast *ast, Vector* env);
 int start_scope(Vector *tuples, Vector *env);
 void end_scope(Vector *env);
 
@@ -65,6 +66,7 @@ int main(void) {
     run("(define a 0)");
     run("(define (f x) (+ x a))");
     run("(let ((a 1)) (f 0))");
+    run("(if 1 2 3)");
     return 0;
 }
 
@@ -142,6 +144,10 @@ Ast *handle_string_token(Token *token) {
     }
     if (strcmp("define", token->raw) == 0) {
         Ast *ast = make_define_ast();
+        return ast;
+    }
+    if (strcmp("if", token->raw) == 0) {
+        Ast *ast = make_if_ast();
         return ast;
     }
     char *name = dup_str(token->raw);
@@ -378,19 +384,17 @@ Constant *lookup_variable(Variable *v, Vector *env) {
         Ast *ast = map_get(m, v->identifier);
         if (ast != NULL) {
             switch (ast->type) {
-                case APPLY_AST:
-                    return evaluate(ast->ap, env);
-                case CONSTANT_AST:
-                    return ast->cnt;
                 case VARIABLE_AST:
                     if (ast->val->type != FUNCTION_TYPE_VARIABLE) {
                         error("not implemented");
                         return NULL;
                     }
                     return make_func_constant(ast->val->func);
+                case APPLY_AST:
+                case CONSTANT_AST:
                 case DEFINE_AST:
-                    error("not implemented");
-                    return NULL;
+                case IF_AST:
+                    return eval_ast(ast, env);
             }
         }
     }
@@ -398,19 +402,17 @@ Constant *lookup_variable(Variable *v, Vector *env) {
     Ast *gv = map_get(global_variables, v->identifier);
     if (gv != NULL) {
         switch (gv->type) {
-            case APPLY_AST:
-                return evaluate(gv->ap, env);
-            case CONSTANT_AST:
-                return gv->cnt;
             case VARIABLE_AST:
                 if (gv->val->type != FUNCTION_TYPE_VARIABLE) {
                     error("not implemented");
                     return NULL;
                 }
                 return make_func_constant(gv->val->func);
+            case APPLY_AST:
+            case CONSTANT_AST:
             case DEFINE_AST:
-                error("not implemented");
-                return NULL;
+            case IF_AST:
+                return eval_ast(gv, env);
         }
     }
 
@@ -453,21 +455,7 @@ int start_scope(Vector *tuples, Vector *env) {
             return -1;
         }
 
-        Constant *c;
-        switch(val->type) {
-            case CONSTANT_AST:
-                c = val->cnt;
-                break;
-            case VARIABLE_AST:
-                c = lookup_variable(val->val, env);
-                break;
-            case APPLY_AST:
-                c = evaluate(val->ap, env);
-                break;
-            case DEFINE_AST:
-                error("illegal let");
-                return -1;
-        }
+        Constant *c = eval_ast(val, env);
         map_set(new_scope, name->val->identifier, make_constant_ast(c));
     }
     vector_push(env, new_scope);
@@ -477,10 +465,52 @@ void end_scope(Vector *env) {
     vector_pop(env);
 }
 
+Constant* if_eval(Application *ap, Vector *env) {
+    int len = ap->asts->len;
+    if (len < 3 || 4 < len) {
+        error("Syntax Error: if has 3 or 4 args");
+        return NULL;
+    }
+    Ast *cond = vector_get(ap->asts, 1);
+    Ast *fst = vector_get(ap->asts, 2);
+    Ast *snd = vector_get(ap->asts, 3);
+    Constant *c = eval_ast(cond, env);
+    if (c->type != BOOLEAN_TYPE_CONST || c->bool_cnt) {
+        return eval_ast(fst, env);
+    } else {
+        return eval_ast(snd, env);
+    }
+}
+
+Constant* eval_ast(Ast *ast, Vector* env) {
+    Constant *ret;
+    switch (ast->type) {
+        case VARIABLE_AST:
+            ret = lookup_variable(ast->val, env);
+            break;
+        case CONSTANT_AST:
+            ret = ast->cnt;
+            break;
+        case APPLY_AST:
+            ret = evaluate(ast->ap, env);
+            break;
+        case IF_AST:
+            ret = if_eval(ast->ap, env);
+            break;
+        case DEFINE_AST:
+            error("define cannot be in such place");
+            return NULL;
+    }
+    return ret;
+}
+
 Constant* evaluate(Application *ap, Vector *env) {
     int len = ap->asts->len;
     int i;
     Ast *top = vector_get(ap->asts, 0);
+    if (top->type == IF_AST) {
+        return if_eval(ap, env);
+    }
     if (top->type == VARIABLE_AST && strcmp(top->val->identifier, "lambda") == 0) {
         if (ap->asts->len < 3) {
             error("lambda must have not less than 3 args");
@@ -524,20 +554,7 @@ Constant* evaluate(Application *ap, Vector *env) {
         Constant *ret;
         for (i = 2; i < ap->asts->len; i++) {
             Ast *ast = vector_get(ap->asts, i);
-            switch (ast->type) {
-                case VARIABLE_AST:
-                    ret = lookup_variable(ast->val, env);
-                    break;
-                case CONSTANT_AST:
-                    ret = ast->cnt;
-                    break;
-                case APPLY_AST:
-                    ret = evaluate(ast->ap, env);
-                    break;
-                case DEFINE_AST:
-                    error("define cannot be in such place");
-                    return NULL;
-            }
+            ret = eval_ast(ast, env);
         }
         end_scope(env);
         return ret;
@@ -557,6 +574,9 @@ Constant* evaluate(Application *ap, Vector *env) {
             case APPLY_AST:
                 vector_push(items, evaluate(ast->ap, env));
                 break;
+            case IF_AST:
+                vector_push(items, if_eval(ast->ap, env));
+                break;
             default:
                 error("oops maybe not implmented");
                 return NULL;
@@ -569,7 +589,7 @@ Constant* evaluate(Application *ap, Vector *env) {
 void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
-    // print_ast(ast, 0);
+    //print_ast(ast, 0);
 
     Vector *top_env = make_vector(1);
     if (ast->type == VARIABLE_AST) {
