@@ -9,7 +9,9 @@
 
 
 typedef struct {
-    int evaluating_func_id;
+    int evaluating_func_id; // 現在のContextにおいて評価中の関数のid
+    int is_tail; // Contextが末尾文脈か
+    int env_size; // 関数適用を開始したときのenvの大きさ（末尾再帰のとき、ここまで戻る）
 } Context;
 
 Ast* parser(char *code);
@@ -76,6 +78,12 @@ int main(void) {
     run("(let ((a 1)) (f 0))");
     run("(define (fact x) (if (< 0 x) (* x (fact (- x 1))) 1))");
     run("(fact 4)");
+    // run("(define (f x) (f x))");
+    // run("(f 1)");
+    run("(define (fact2 x y) (if (< x 1) 1 (if (< x 2) y (fact2 (- x 1) (modulo (* x y) 65537)))))");
+    run("(fact2 1000 1)");
+    run("(define (fact3 x) (if (< 0 x) (modulo (* x (fact3 (- x 1))) 65537) 1))");
+    run("(fact3 1000)");
     return 0;
 }
 
@@ -296,6 +304,13 @@ Vector *_zip_vectors(Vector *names, Vector *items) {
     return v;
 }
 
+void set_env(Vector *env, char *name, Ast *ast) {
+    int i = env->len - 1;
+    for (; i >= 0; i--) {
+        Map *m = vector_get(env, i);
+        Ast *ret = map_get(m, name);
+    }
+}
 
 // Vector <Constant *>
 Constant *execute(Vector *items, Context ctx) {
@@ -322,11 +337,25 @@ Constant *execute(Vector *items, Context ctx) {
         Vector *arg_names = f->names;
 
         Vector *tuples = _zip_vectors(arg_names, items);
-
-        start_scope(tuples, env, ctx);
         Constant *ret;
+
+        int flag = 1;
+        if (ctx.is_tail == 1 && ctx.evaluating_func_id == f->id) {
+            int i;
+            flag = 0;
+            // printf("hoge%d\n", env->len);
+            for (i = 0; i < (env->len - ctx.env_size + 1); i++) {
+                vector_pop(env);
+            }
+        }
+        start_scope(tuples, env, ctx);
+        ctx.is_tail = 1;
+        ctx.evaluating_func_id = f->id;
+        ctx.env_size = env->len;
         ret = evaluate(f->ast->ap, env, ctx);
-        end_scope(env);
+        if (flag) {
+            end_scope(env);
+        }
 
         return ret;
     } else if (f->type == LAMBDA_FUNCTION) {
@@ -394,6 +423,17 @@ Constant *builtin_quotient(Vector *items) {
     }
     return make_int_constant(c1->integer_cnt / c2->integer_cnt);
 }
+Constant *builtin_modulo(Vector *items) {
+    if (items->len != 3) {
+        error("modulo: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
+        error("modulo: arguments must have Integer Type");
+    }
+    return make_int_constant(c1->integer_cnt % c2->integer_cnt);
+}
 Constant *builtin_lower(Vector *items) {
     if (items->len != 3) {
         error("<: invalid arguments.");
@@ -401,7 +441,7 @@ Constant *builtin_lower(Vector *items) {
     Constant *c1 = vector_get(items, 1);
     Constant *c2 = vector_get(items, 2);
     if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
-        error("quotient: arguments must have Integer Type");
+        error("<: arguments must have Integer Type");
     }
     return make_boolean_constant(c1->integer_cnt < c2->integer_cnt);
 }
@@ -421,6 +461,7 @@ Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
                     }
                     return make_func_constant(ast->val->func);
                 case APPLY_AST:
+                    ctx.is_tail = 0;
                 case CONSTANT_AST:
                 case DEFINE_AST:
                 case IF_AST:
@@ -439,6 +480,7 @@ Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
                 }
                 return make_func_constant(gv->val->func);
             case APPLY_AST:
+                ctx.is_tail = 0;
             case CONSTANT_AST:
             case DEFINE_AST:
             case IF_AST:
@@ -457,6 +499,9 @@ Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
     }
     if (strcmp(v->identifier, "quotient") == 0) {
         return make_func_constant_primitive(&builtin_quotient, 2);
+    }
+    if (strcmp(v->identifier, "modulo") == 0) {
+        return make_func_constant_primitive(&builtin_modulo, 2);
     }
     if (strcmp(v->identifier, "<") == 0) {
         return make_func_constant_primitive(&builtin_lower, 2);
@@ -488,7 +533,10 @@ int start_scope(Vector *tuples, Vector *env, Context ctx) {
             return -1;
         }
 
+        int tmp = ctx.is_tail;
+        ctx.is_tail = 0;
         Constant *c = eval_ast(val, env, ctx);
+        ctx.is_tail = tmp;
         map_set(new_scope, name->val->identifier, make_constant_ast(c));
     }
     vector_push(env, new_scope);
@@ -507,7 +555,12 @@ Constant* if_eval(Application *ap, Vector *env, Context ctx) {
     Ast *cond = vector_get(ap->asts, 1);
     Ast *fst = vector_get(ap->asts, 2);
     Ast *snd = vector_get(ap->asts, 3);
+
+    int tmp = ctx.is_tail;
+    ctx.is_tail = 0;
     Constant *c = eval_ast(cond, env, ctx);
+    ctx.is_tail = tmp;
+
     if (c->type != BOOLEAN_TYPE_CONST || c->bool_cnt) {
         return eval_ast(fst, env, ctx);
     } else {
@@ -585,7 +638,12 @@ Constant* evaluate(Application *ap, Vector *env, Context ctx) {
 
         start_scope(tuples, env, ctx);
         Constant *ret;
+        int tmp = ctx.is_tail;
+        ctx.is_tail = 0;
         for (i = 2; i < ap->asts->len; i++) {
+            // letは最後の実行については末尾文脈
+            if ((i + 1) == ap->asts->len) ctx.is_tail = tmp;
+
             Ast *ast = vector_get(ap->asts, i);
             ret = eval_ast(ast, env, ctx);
         }
@@ -595,7 +653,10 @@ Constant* evaluate(Application *ap, Vector *env, Context ctx) {
 
     Vector *items = make_vector(8);
     for (i = 0; i < len; i++) {
+        // 末尾文脈ではない
         Ast *ast = vector_get(ap->asts, i);
+        int tmp = ctx.is_tail;
+        ctx.is_tail = 0;
         switch (ast->type) {
             case VARIABLE_AST:
                 // TODO: look up envs, locals
@@ -614,6 +675,7 @@ Constant* evaluate(Application *ap, Vector *env, Context ctx) {
                 error("oops maybe not implmented");
                 return NULL;
         }
+        ctx.is_tail = tmp;
     }
     Constant * ret = execute(items, ctx);
     return ret;
@@ -625,7 +687,7 @@ void run(char *line) {
     //print_ast(ast, 0);
 
     Vector *top_env = make_vector(1);
-    Context ctx = {-1};
+    Context ctx = {-1, 1, 0};
     if (ast->type == VARIABLE_AST) {
         Constant *c = lookup_variable(ast->val, top_env, ctx);
         print_constant(c);

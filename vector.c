@@ -67,7 +67,7 @@ void *vector_get(Vector *v, int idx) {
         assert(1);
     }
     if (idx < 0) {
-        return v->body[v->len - idx];
+        return v->body[v->len + idx];
     }
     return v->body[idx];
 }
