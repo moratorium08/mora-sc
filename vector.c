@@ -41,7 +41,7 @@ Vector *copy_vector(Vector *vec) {
 }
 
 int extend_vector(Vector *v, int add_size) {
-    void *new_body = malloc(v->cur_max + add_size);
+    void *new_body = malloc((v->cur_max + add_size) * sizeof(void *));
     if (new_body == NULL) {
         return -1;
     }

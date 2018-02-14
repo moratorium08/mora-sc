@@ -54,19 +54,23 @@ int main(void) {
     run("a");
     run("(define b (+ 10 1))");
     run("b");
+    run("(if (< a b) 10 20)");
     run("(define f (lambda (x) (+ x 1)))");
     run("(f 10)");
     run("(define g (lambda (x y) (+ x y)))");
     run("(g 3 5)");
     run("(define h (lambda (x) (lambda (y) (+ x (* a y)))))");
     run("((h 9) 9)");
+    run("(define i (lambda (x) (if (< x a) a x)))");
+    run("(i (f 100))");
     run("(let ((a 10) (b (f a)) (c (- b 1))) (let ((a 10) (b (f a)) (c (- b 1))) (+ (+ a b) c)))");
     run("a");
     // scope test
     run("(define a 0)");
     run("(define (f x) (+ x a))");
     run("(let ((a 1)) (f 0))");
-    run("(if #f 2 3)");
+    run("(define (fact x) (if (< 0 x) (* x (fact (- x 1))) 1))");
+    run("(fact 4)");
     return 0;
 }
 
@@ -306,13 +310,12 @@ Constant *execute(Vector *items) {
         Constant *ret = (raw_func)(items);
         return ret;
     } else if (f->type == CONSTRUCTIVE_FUNCTION) {
-        // この実装さすがに嘘が激しすぎる
         if (f->ast->type != APPLY_AST) {
             error("non-functionla value cannot be applied.");
             return NULL;
         }
         Vector *arg_names = f->names;
-        int i;
+
         Vector *tuples = _zip_vectors(arg_names, items);
 
         start_scope(tuples, env);
@@ -386,6 +389,17 @@ Constant *builtin_quotient(Vector *items) {
     }
     return make_int_constant(c1->integer_cnt / c2->integer_cnt);
 }
+Constant *builtin_lower(Vector *items) {
+    if (items->len != 3) {
+        error("<: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    if (c1->type != INTEGER_TYPE_CONST || c2->type != INTEGER_TYPE_CONST) {
+        error("quotient: arguments must have Integer Type");
+    }
+    return make_boolean_constant(c1->integer_cnt < c2->integer_cnt);
+}
 
 Constant *lookup_variable(Variable *v, Vector *env) {
     // lookup let scopes
@@ -438,6 +452,9 @@ Constant *lookup_variable(Variable *v, Vector *env) {
     }
     if (strcmp(v->identifier, "quotient") == 0) {
         return make_func_constant_primitive(&builtin_quotient, 2);
+    }
+    if (strcmp(v->identifier, "<") == 0) {
+        return make_func_constant_primitive(&builtin_lower, 2);
     }
     else {
         char error_msg[1000];
