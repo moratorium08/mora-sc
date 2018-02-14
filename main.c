@@ -34,30 +34,37 @@ void print_globals() {
         printf("** %s **\n", key);
         print_ast(map_get(global_variables, key), 0);
     }
-
-
 }
 
 int main(void) {
     global_variables = make_map(100);
     local_variables = make_vector(100);
     //char *s = "(define x 3)";
-    char *s = "(define x 2)";
-    run(s);
-    s = "x";
-    run(s);
-    s = "1";
-    run(s);
-    s = "(let ((x 3)) (quotient (* (+ x 1) 2) 3))";
-    run(s);
-    s = "(* x (let ((x 5)) x))";
-    run(s);
-    s = "((lambda (x y)(+ x y)) 1 2)";
-    run(s);
-    s = "(define (f x) (+ x 2))";
-    run(s);
-    s = "(f 5)";
-    run(s);
+    run("(define x 2)");
+    run("x");
+    run("1");
+    run("(let ((x 3)) (quotient (* (+ x 1) 2) 3))");
+    run("(* x (let ((x 5)) x))");
+    run("((lambda (x y)(+ x y)) 1 2)");
+    run("(define (f x) (+ x 2))");
+    run("(f 5)");
+    run("(+ (- (* (* 1 2) 3) (* 4 5)) (+ (* 6 7) (* 8 9)))");
+    run("(define a 100)");
+    run("a");
+    run("(define b (+ 10 1))");
+    run("b");
+    run("(define f (lambda (x) (+ x 1)))");
+    run("(f 10)");
+    run("(define g (lambda (x y) (+ x y)))");
+    run("(g 3 5)");
+    run("(define h (lambda (x) (lambda (y) (+ x (* a y)))))");
+    run("((h 9) 9)");
+    run("(let ((a 10) (b (f a)) (c (- b 1))) (let ((a 10) (b (f a)) (c (- b 1))) (+ (+ a b) c)))");
+    run("a");
+    // scope test
+    run("(define a 0)");
+    run("(define (f x) (+ x a)");
+    run("(let ((a 1)) (f 0))");
     return 0;
 }
 
@@ -105,7 +112,7 @@ int is_number(char *s) {
     int i;
     int flag = 1;
     for (i = 0; i < n; i++) {
-        if (i == 0 && s[i] == '-') continue;
+        if (i == 0 && s[i] == '-' && n > 1) continue;
         switch (s[i]) {
             case '0':
             case '1':
@@ -325,6 +332,7 @@ Constant *builtin_add(Vector *items) {
     }
     return make_int_constant(c1->integer_cnt + c2->integer_cnt);
 }
+
 Constant *builtin_sub(Vector *items) {
     if (items->len != 3) {
         error("-: invalid arguments.");
@@ -560,6 +568,7 @@ Constant* evaluate(Application *ap) {
 void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
+    // print_ast(ast, 0);
 
     if (ast->type == VARIABLE_AST) {
         Constant *c = lookup_variable(ast->val);
