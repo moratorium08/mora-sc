@@ -4,6 +4,10 @@
 #include "ast.h"
 #include "vector.h"
 
+int get_function_id() {
+    return GLOBAL_CURRENT_ID++;
+}
+
 Application *make_application() {
     Application *ap = malloc(sizeof(Application));
     ap->asts = make_vector(5);
@@ -77,6 +81,7 @@ Constant *make_func_constant_primitive(SchemeFunc f, int argc) {
     Function *func = malloc(sizeof(Function));
     func->env = make_vector(0);
     func->type = PRIMITIVE_FUNCTION;
+    func->id = get_function_id();
     func->argc = argc;
     func->func = f;
     cnt->type = FUNCTION_TYPE_CONST;
@@ -124,6 +129,7 @@ void print_constant(Constant *c) {
 Function *make_constructive_function(Ast *ast, Vector* args, Vector *env) {
     Function *func = malloc(sizeof(Function));
     func->type = CONSTRUCTIVE_FUNCTION;
+    func->id = get_function_id();
     func->env = copy_vector(env);
     func->argc = args->len;
     func->ast = ast;
@@ -145,6 +151,7 @@ Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env) {
     c->type = FUNCTION_TYPE_CONST;
     Function *func = malloc(sizeof(Function));
     func->type = LAMBDA_FUNCTION;
+    func->id = get_function_id();
     func->env = copy_vector(env);
     func->argc = args->len;
     func->lam_ast = ast;

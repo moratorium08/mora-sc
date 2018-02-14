@@ -11,11 +11,14 @@ typedef enum {
     LAMBDA_FUNCTION
 } FunctionType;
 
-// 環境が足りていないがはてさて
+// 末尾再帰のためfunctionに一意なidを与える
+int GLOBAL_CURRENT_ID;
+
 typedef struct Function {
     FunctionType type;
     int argc;
     Vector *env; // Vector<Map<Ast*>>
+    int id; // unique func id
     union {
         SchemeFunc func;
         struct {
