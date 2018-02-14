@@ -52,6 +52,8 @@ int main(void) {
     run(s);
     s = "(* x (let ((x 5)) x))";
     run(s);
+    s = "((lambda (x y)(+ x y)) 1 2)";
+    run(s);
     s = "(define (f x) (+ x 2))";
     run(s);
     s = "(f 5)";
@@ -261,6 +263,7 @@ Vector *_zip_vectors(Vector *names, Vector *items) {
     return v;
 }
 
+
 // Vector <Constant *>
 Constant *execute(Vector *items) {
     Constant *c = vector_get(items, 0);
@@ -278,6 +281,7 @@ Constant *execute(Vector *items) {
         Constant *ret = (raw_func)(items);
         return ret;
     } else if (f->type == CONSTRUCTIVE_FUNCTION) {
+        // この実装さすがに嘘が激しすぎる
         if (f->ast->type != APPLY_AST) {
             error("non-functionla value cannot be applied.");
             return NULL;
@@ -291,6 +295,19 @@ Constant *execute(Vector *items) {
         ret = evaluate(f->ast->ap);
         end_scope();
 
+        return ret;
+    } else if (f->type == LAMBDA_FUNCTION) {
+        if (f->lam_ast->type != APPLY_AST) {
+            error("non-functionla value cannot be applied.");
+            return NULL;
+        }
+        Vector *arg_names = f->lam_names;
+        Vector *tuples = _zip_vectors(arg_names, items);
+
+        start_scope(tuples);
+        Constant *ret;
+        ret = evaluate(f->lam_ast->ap);
+        end_scope();
         return ret;
     }
     error("not implmented");
@@ -401,10 +418,13 @@ Constant *lookup_variable(Variable *v) {
         return make_func_constant_primitive(&builtin_quotient, 2);
     }
     else {
-        error("Ooops");
+        char error_msg[1000];
+        sprintf(error_msg, "Oops no variable: %s", v->identifier);
+        error(error_msg);
         return NULL;
     }
 }
+
 
 // tuples: Vector<Ast *>
 // This Ast must have APPLY_AST type
@@ -452,6 +472,32 @@ Constant* evaluate(Application *ap) {
     int len = ap->asts->len;
     int i;
     Ast *top = vector_get(ap->asts, 0);
+    if (top->type == VARIABLE_AST && strcmp(top->val->identifier, "lambda") == 0) {
+        if (ap->asts->len < 3) {
+            error("lambda must have not less than 3 args");
+            return NULL;
+        }
+        Ast *args_ast = vector_get(ap->asts, 1);
+        if (args_ast->type != APPLY_AST) {
+            error("illegal lambda");
+            return NULL;
+        }
+
+        // Vector<Variable*>
+        Vector *names = make_vector(args_ast->ap->asts->len);
+        for (i = 0; i < args_ast->ap->asts->len; i++) {
+            Ast *v_ast = vector_get(args_ast->ap->asts, i);
+            if (v_ast->type != VARIABLE_AST) {
+                error("illegal lambda");
+                return NULL;
+            }
+            vector_push(names, v_ast->val);
+        }
+
+        Ast *ast = vector_get(ap->asts, 2);
+        Constant *ret = make_lambda_constant(ast, names);
+        return ret;
+    }
     if (top->type == VARIABLE_AST && strcmp(top->val->identifier, "let") == 0) {
         // handling let
         if (ap->asts->len < 2) {
@@ -514,6 +560,7 @@ Constant* evaluate(Application *ap) {
 void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
+
     if (ast->type == VARIABLE_AST) {
         Constant *c = lookup_variable(ast->val);
         print_constant(c);
@@ -524,7 +571,6 @@ void run(char *line) {
         puts("");
         return;
     }
-
     Ast *top = vector_get(ast->ap->asts, 0);
     if (top->type == DEFINE_AST) {
         Ast *def_ast = vector_get(ast->ap->asts, 1);

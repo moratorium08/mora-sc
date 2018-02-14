@@ -7,9 +7,11 @@ typedef Constant *(*SchemeFunc)(Vector *);
 
 typedef enum {
     PRIMITIVE_FUNCTION,
-    CONSTRUCTIVE_FUNCTION
+    CONSTRUCTIVE_FUNCTION,
+    LAMBDA_FUNCTION
 } FunctionType;
 
+// 環境が足りていないがはてさて
 typedef struct Function {
     FunctionType type;
     int argc;
@@ -18,6 +20,10 @@ typedef struct Function {
         struct {
             Ast *ast;
             Vector *names; //Vector<Variable*>
+        };
+        struct {
+            Ast *lam_ast;
+            Vector *lam_names; // Vector<Variable*>
         };
     };
 } Function;
@@ -42,14 +48,17 @@ typedef struct {
 typedef enum {
     INTEGER_TYPE_CONST,
     BOOLEAN_TYPE_CONST,
-    FUNCTION_TYPE_CONST,
+    FUNCTION_TYPE_CONST
 } ConstantType;
 
 struct Constant {
     ConstantType type;
     union {
+        // Type: Integer
         int integer_cnt;
+        // Type: Boolean
         int bool_cnt;
+        // Type: Function
         Function *func;
     };
 };
@@ -85,5 +94,6 @@ Function *make_constructive_function(Ast *ast, Vector * args);
 Constant *make_int_constant(int x);
 Constant *make_func_constant(Function *f);
 Constant *make_func_constant_primitive(SchemeFunc f, int argc);
+Constant *make_lambda_constant(Ast *ast, Vector *args);
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);

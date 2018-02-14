@@ -107,10 +107,25 @@ Function *make_constructive_function(Ast *ast, Vector* args) {
     return func;
 }
 
+
 Constant *make_func_constant(Function *f) {
     Constant *c = malloc(sizeof(Constant));
     c->type = FUNCTION_TYPE_CONST;
     c->func = f;
+    return c;
+}
+
+// items ex: (lambda (x y) (+ x y))
+Constant *make_lambda_constant(Ast *ast, Vector *args) {
+    Constant *c = malloc(sizeof(Constant));
+    c->type = FUNCTION_TYPE_CONST;
+    Function *func = malloc(sizeof(Function));
+
+    func->type = LAMBDA_FUNCTION;
+    func->argc = args->len;
+    func->lam_ast = ast;
+    func->names = args;
+    c->func = func;
     return c;
 }
 
