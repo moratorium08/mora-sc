@@ -6,3 +6,4 @@ void fexpect_int(char *filename, int line, int a, int b);
 void fexpect_str(char *filename, int line, char *a, char *b);
 void describe(char *description);
 void described();
+void summary();

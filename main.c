@@ -353,7 +353,6 @@ Constant *execute(Vector *items, Context ctx) {
                 break;
             }
         }
-
         return ret;
     } else if (f->type == LAMBDA_FUNCTION) {
         if (f->lam_ast->type != APPLY_AST) {
@@ -540,7 +539,7 @@ int start_scope(Vector *tuples, Vector *env, Context ctx) {
     return 1;
 }
 void end_scope(Vector *env) {
-    vector_pop(env);
+    Map *m = vector_pop(env);
 }
 
 Constant* if_eval(Application *ap, Vector *env, Context ctx) {

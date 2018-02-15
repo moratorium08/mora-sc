@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "vector.h"
-#include "map.h"
-#include "ast.h"
+#include "../vector.h"
+#include "../map.h"
+#include "../ast.h"
 #include "test.h"
 
 // context
@@ -20,6 +20,7 @@ void print_spaces(int x) {
 void fexpect_int(char *filename, int line, int a, int b) {
     if (a == b) {
         TEST_SUCCESS += 1;
+        return;
     }
     print_spaces(TEST_NEST);
     printf("%s: %d, expect %d but get %d\n", filename, line, a, b);
@@ -29,6 +30,7 @@ void fexpect_int(char *filename, int line, int a, int b) {
 void fexpect_str(char *filename, int line, char *a, char *b) {
     if (strcmp(a, b) == 0) {
         TEST_SUCCESS += 1;
+        return;
     }
     print_spaces(TEST_NEST);
     printf("%s: %d, expect %s but get %s\n", filename, line, a, b);
@@ -50,6 +52,7 @@ void summary() {
     TEST_SUCCESS = 0;
     described();
 }
+/*
 
 void test_vector() {
     describe("Vector unit test");
@@ -90,3 +93,4 @@ int main(void) {
     run_unit();
     return 0;
 }
+*/

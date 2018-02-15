@@ -59,6 +59,7 @@ typedef enum {
     INTEGER_TYPE_CONST,
     BOOLEAN_TYPE_CONST,
     FUNCTION_TYPE_CONST,
+    PAIR_TYPE_CONST,
     TAIL_TYPE_CONST, // for tail recursion
 } ConstantType;
 
@@ -71,11 +72,9 @@ struct Constant {
         int bool_cnt;
         // Type: Function
         Function *func;
+        // Type: Pair
         // Type Tail
-        struct {
-    //      Context ctx;
-            Vector *items;
-        };
+        Vector *items;
     };
 };
 
