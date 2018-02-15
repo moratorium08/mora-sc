@@ -1,3 +1,6 @@
+#ifndef AST_INCLUDE
+#define AST_INCLUDE
+
 #include "vector.h"
 #include "pair.h"
 
@@ -132,3 +135,4 @@ Constant *make_symbol_constant(char *symbol);
 Constant *get_list_base_instance();
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);
+#endif
