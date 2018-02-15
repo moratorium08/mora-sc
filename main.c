@@ -84,6 +84,7 @@ int main(void) {
     run("(define l (cons 1 (cons 2 (cons 3 (list)))))");
     run("l");
     run("(car (cdr l))");
+    run("'(+ '(+ 1) 2)");
     return 0;
 }
 
@@ -242,12 +243,18 @@ Ast * parser(char *code) {
         char c = code[i];
         char *tmp;
         Token *token;
+        int *current;
 
         switch(c) {
             case '(':
                 token = create_bracket_token(OPEN_BRACKET_TOKEN);
                 vector_push(token_tree, token);
                 st = i+1;
+                if (quote_stack->len > 0) {
+                    current = vector_pop(quote_stack);
+                    (*current)++;
+                    vector_push(quote_stack, current);
+                }
                 break;
             case ')':
                 if (st < i) {
@@ -258,6 +265,16 @@ Ast * parser(char *code) {
                 token = create_bracket_token(CLOSE_BRACKET_TOKEN);
                 vector_push(token_tree, token);
                 st = i+1;
+                if (quote_stack->len > 0) {
+                    current = vector_pop(quote_stack);
+                    (*current)--;
+                    if (*current > 0) {
+                        vector_push(quote_stack, current);
+                    } else {
+                        token = create_bracket_token(CLOSE_BRACKET_TOKEN);
+                        vector_push(token_tree, token);
+                    }
+                }
                 break;
             // 明らかに""とか'()とかキャッチできないので
             // TODO
@@ -268,6 +285,15 @@ Ast * parser(char *code) {
                     vector_push(token_tree, token);
                 }
                 st = i+1;
+                break;
+            case '\'':
+                token = create_bracket_token(OPEN_BRACKET_TOKEN);
+                vector_push(token_tree, token);
+                token = create_str_token(quote_str);
+                vector_push(token_tree, token);
+                int *x = malloc(sizeof(int));
+                *x = 0;
+                vector_push(quote_stack, x);
                 break;
             default:
                 break;
@@ -735,7 +761,7 @@ Constant* evaluate(Application *ap, Vector *env, Context ctx) {
 void run(char *line) {
     printf("Evaluating: %s\n", line);
 	Ast *ast = parser(line);
-    //print_ast(ast, 0);
+    // print_ast(ast, 0);
 
     Vector *top_env = make_vector(1);
     Context ctx = {-1, 1, 0};
