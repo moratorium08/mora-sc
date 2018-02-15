@@ -734,7 +734,8 @@ Constant* evaluate(Application *ap, Vector *env, Context ctx) {
         }
 
         Ast *ast = vector_get(ap->asts, 2);
-        Constant *ret = make_lambda_constant(ast, names, env);
+        Vector *new_env = copy_vector(env);
+        Constant *ret = make_lambda_constant(ast, names, new_env);
         return ret;
     }
     if (top->type == VARIABLE_AST && strcmp(top->val->identifier, "let") == 0) {
@@ -848,7 +849,9 @@ void run(char *line) {
                 error("define args are too much");
                 return;
             }
-            map_set(global_variables, def_ast->val->identifier, vector_get(ast->ap->asts, 2));
+            Ast *ast_body = vector_get(ast->ap->asts, 2);
+            Constant *c = eval_ast(ast_body, top_env, ctx);
+            map_set(global_variables, def_ast->val->identifier, make_constant_ast(c));
         } else {
             error("illegal define statement");
             return;
