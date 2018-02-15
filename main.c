@@ -81,7 +81,9 @@ int main(void) {
     run("(fact3 1000)");
     // run("(fact3 10000)"); -> overflow
     run("(cons 1 2)");
-
+    run("(define l (cons 1 (cons 2 (cons 3 (list)))))");
+    run("l");
+    run("(car (cdr l))");
     return 0;
 }
 
@@ -319,7 +321,7 @@ Constant *execute(Vector *items, Context ctx) {
     }
     Function *f = c->func;
     Vector *env = f->env;
-    if (f->argc != (items->len - 1)) {
+    if (f->argc >= 0 && f->argc != (items->len - 1)) {
         error("invalid arguments");
         return NULL;
     }
@@ -450,6 +452,36 @@ Constant *builtin_cons(Vector *items) {
     Constant *c2 = vector_get(items, 2);
     return make_pair_constant(c1, c2);
 }
+Constant *builtin_car(Vector *items) {
+    if (items->len != 2) {
+        error("car: invalid arguments.");
+    }
+    Constant *p = vector_get(items, 1);
+    if (p->type != PAIR_TYPE_CONST) {
+        error("car: car argument must be a pair.");
+    }
+    return p->pair->fst;
+}
+Constant *builtin_cdr(Vector *items) {
+    if (items->len != 2) {
+        error("cdr: invalid arguments.");
+    }
+    Constant *p = vector_get(items, 1);
+    if (p->type != PAIR_TYPE_CONST) {
+        error("cdr: cdr argument must be a pair.");
+    }
+    return p->pair->snd;
+}
+Constant *builtin_list(Vector *items) {
+    int n = items->len;
+    int i;
+    Constant *l = get_list_base_instance();
+    for (i = items->len - 1; i >= 1; i--) {
+        Constant *item = vector_get(items, i);
+        l = make_pair_constant(item, l);
+    }
+    return l;
+}
 
 Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
     // lookup let scopes
@@ -513,6 +545,15 @@ Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
     }
     if (strcmp(v->identifier, "cons") == 0) {
         return make_func_constant_primitive(&builtin_cons, 2);
+    }
+    if (strcmp(v->identifier, "car") == 0) {
+        return make_func_constant_primitive(&builtin_car, 1);
+    }
+    if (strcmp(v->identifier, "cdr") == 0) {
+        return make_func_constant_primitive(&builtin_cdr, 1);
+    }
+    if (strcmp(v->identifier, "list") == 0) {
+        return make_func_constant_primitive(&builtin_list, -1);
     }
     else {
         char error_msg[1000];

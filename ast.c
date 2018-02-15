@@ -98,6 +98,16 @@ Constant *make_pair_constant(Constant *fst, Constant *snd) {
     return cnt;
 }
 
+Constant *_base_list_instance = NULL;
+Constant *get_list_base_instance() {
+    if (_base_list_instance == NULL) {
+        _base_list_instance = malloc(sizeof(Constant));
+        _base_list_instance->type = SPECIAL_TYPE_CONST;
+        _base_list_instance->special = LIST_TYPE_SPECIAL;
+    }
+    return _base_list_instance;
+}
+
 Ast *make_boolean_ast(int b) {
     Ast *ast;
     ast = malloc(sizeof(Ast));
@@ -121,6 +131,34 @@ Ast *make_constant_ast(Constant *c) {
     return ast;
 }
 
+int is_list(Constant *c) {
+    while (c->type == PAIR_TYPE_CONST) {
+        c = c->pair->snd;
+    }
+    return c->type == SPECIAL_TYPE_CONST && c->special == LIST_TYPE_SPECIAL;
+}
+
+void _print_pair(Constant *c) {
+    printf("(");
+    if (is_list(c)) {
+        while (c->type == PAIR_TYPE_CONST) {
+            print_constant(c->pair->fst);
+            c = c->pair->snd;
+            if (c->type == PAIR_TYPE_CONST) {
+                printf(" ");
+            }
+        }
+    } else {
+        Constant *c1, *c2;
+        c1 = c->pair->fst;
+        c2 = c->pair->snd;
+        print_constant(c1);
+        printf(" . ");
+        print_constant(c2);
+    }
+    printf(")");
+}
+
 void print_constant(Constant *c) {
     switch (c->type) {
         case INTEGER_TYPE_CONST:
@@ -136,14 +174,10 @@ void print_constant(Constant *c) {
             printf("<tail %p>", c->items);
             break;
         case PAIR_TYPE_CONST:
-            printf("(");
-            Constant *c1, *c2;
-            c1 = c->pair->fst;
-            c2 = c->pair->snd;
-            print_constant(c1);
-            printf(" . ");
-            print_constant(c2);
-            printf(")");
+            _print_pair(c);
+            break;
+        case SPECIAL_TYPE_CONST:
+            printf("()");
             break;
     }
 }

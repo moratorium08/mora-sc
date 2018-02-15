@@ -62,7 +62,12 @@ typedef enum {
     FUNCTION_TYPE_CONST,
     PAIR_TYPE_CONST,
     TAIL_TYPE_CONST, // for tail recursion
+    SPECIAL_TYPE_CONST // for handling special data for processing
 } ConstantType;
+
+typedef enum {
+    LIST_TYPE_SPECIAL // Constant of (list)
+} SpecialIdentifier;
 
 struct Constant {
     ConstantType type;
@@ -77,6 +82,8 @@ struct Constant {
         Pair *pair;
         // Type Tail
         Vector *items;
+        // Type List Base
+        SpecialIdentifier special;
     };
 };
 
@@ -118,5 +125,6 @@ Constant *make_func_constant_primitive(SchemeFunc f, int argc);
 Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env);
 Constant *make_tail_constant(Vector *args); // Vector<Ast *>
 Constant *make_pair_constant(Constant *fst, Constant *snd);
+Constant *get_list_base_instance();
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);
