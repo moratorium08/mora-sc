@@ -1,5 +1,5 @@
-#ifndef VECTOR_INCLUDE
-#define VECTOR_INCLUDE
+#ifndef PAIR_INCLUDE
+#define PAIR_INCLUDE
 
 typedef struct {
     void * fst;

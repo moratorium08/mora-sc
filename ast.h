@@ -1,4 +1,5 @@
 #include "vector.h"
+#include "pair.h"
 
 typedef struct Constant Constant;
 typedef struct Ast Ast;
@@ -73,6 +74,7 @@ struct Constant {
         // Type: Function
         Function *func;
         // Type: Pair
+        Pair *pair;
         // Type Tail
         Vector *items;
     };
@@ -115,5 +117,6 @@ Constant *make_func_constant(Function *f);
 Constant *make_func_constant_primitive(SchemeFunc f, int argc);
 Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env);
 Constant *make_tail_constant(Vector *args); // Vector<Ast *>
+Constant *make_pair_constant(Constant *fst, Constant *snd);
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ast.h"
 #include "vector.h"
+#include "pair.h"
 
 int get_function_id() {
     return GLOBAL_CURRENT_ID++;
@@ -89,6 +90,14 @@ Constant *make_func_constant_primitive(SchemeFunc f, int argc) {
     return cnt;
 }
 
+Constant *make_pair_constant(Constant *fst, Constant *snd) {
+    Constant *cnt = malloc(sizeof(Constant));
+    Pair *p = make_pair(fst, snd);
+    cnt->type = PAIR_TYPE_CONST;
+    cnt->pair = p;
+    return cnt;
+}
+
 Ast *make_boolean_ast(int b) {
     Ast *ast;
     ast = malloc(sizeof(Ast));
@@ -122,6 +131,19 @@ void print_constant(Constant *c) {
             break;
         case FUNCTION_TYPE_CONST:
             printf("<function %p>", c->func);
+            break;
+        case TAIL_TYPE_CONST:
+            printf("<tail %p>", c->items);
+            break;
+        case PAIR_TYPE_CONST:
+            printf("(");
+            Constant *c1, *c2;
+            c1 = c->pair->fst;
+            c2 = c->pair->snd;
+            print_constant(c1);
+            printf(" . ");
+            print_constant(c2);
+            printf(")");
             break;
     }
 }

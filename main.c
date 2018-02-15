@@ -80,6 +80,7 @@ int main(void) {
     run("(define (fact3 x) (if (< 0 x) (modulo (* x (fact3 (- x 1))) 65537) 1))");
     run("(fact3 1000)");
     // run("(fact3 10000)"); -> overflow
+    run("(cons 1 2)");
 
     return 0;
 }
@@ -441,6 +442,14 @@ Constant *builtin_lower(Vector *items) {
     }
     return make_boolean_constant(c1->integer_cnt < c2->integer_cnt);
 }
+Constant *builtin_cons(Vector *items) {
+    if (items->len != 3) {
+        error("cons: invalid arguments.");
+    }
+    Constant *c1 = vector_get(items, 1);
+    Constant *c2 = vector_get(items, 2);
+    return make_pair_constant(c1, c2);
+}
 
 Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
     // lookup let scopes
@@ -501,6 +510,9 @@ Constant *lookup_variable(Variable *v, Vector *env, Context ctx) {
     }
     if (strcmp(v->identifier, "<") == 0) {
         return make_func_constant_primitive(&builtin_lower, 2);
+    }
+    if (strcmp(v->identifier, "cons") == 0) {
+        return make_func_constant_primitive(&builtin_cons, 2);
     }
     else {
         char error_msg[1000];
