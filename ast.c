@@ -98,6 +98,13 @@ Constant *make_pair_constant(Constant *fst, Constant *snd) {
     return cnt;
 }
 
+Constant *make_symbol_constant(char *symbol) {
+    Constant *cnt = malloc(sizeof(Constant));
+    cnt->type = SYMBOL_TYPE_CONST;
+    cnt->symbol = symbol;
+    return cnt;
+}
+
 Constant *_base_list_instance = NULL;
 Constant *get_list_base_instance() {
     if (_base_list_instance == NULL) {
@@ -166,6 +173,9 @@ void print_constant(Constant *c) {
             break;
         case BOOLEAN_TYPE_CONST:
             printf("#%c", c->bool_cnt == 1 ? 't' : 'f');
+            break;
+        case SYMBOL_TYPE_CONST:
+            printf("%s", c->symbol);
             break;
         case FUNCTION_TYPE_CONST:
             printf("<function %p>", c->func);

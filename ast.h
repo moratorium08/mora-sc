@@ -59,10 +59,11 @@ typedef struct {
 typedef enum {
     INTEGER_TYPE_CONST,
     BOOLEAN_TYPE_CONST,
+    SYMBOL_TYPE_CONST,
     FUNCTION_TYPE_CONST,
     PAIR_TYPE_CONST,
     TAIL_TYPE_CONST, // for tail recursion
-    SPECIAL_TYPE_CONST // for handling special data for processing
+    SPECIAL_TYPE_CONST, // for handling special data for processing
 } ConstantType;
 
 typedef enum {
@@ -76,6 +77,8 @@ struct Constant {
         int integer_cnt;
         // Type: Boolean
         int bool_cnt;
+        // Type: Symbol
+        char *symbol;
         // Type: Function
         Function *func;
         // Type: Pair
@@ -125,6 +128,7 @@ Constant *make_func_constant_primitive(SchemeFunc f, int argc);
 Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env);
 Constant *make_tail_constant(Vector *args); // Vector<Ast *>
 Constant *make_pair_constant(Constant *fst, Constant *snd);
+Constant *make_symbol_constant(char *symbol);
 Constant *get_list_base_instance();
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);

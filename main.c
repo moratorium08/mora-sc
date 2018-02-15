@@ -236,6 +236,8 @@ Ast * parser(char *code) {
     // 1. Build Parsed Token Tree
     // 2. Then Recursively create AST
     Vector *token_tree = make_vector(256);
+    Vector *quote_stack = make_vector(256);
+    static char *quote_str = "quote";
     for (; i < n; i++) {
         char c = code[i];
         char *tmp;
