@@ -145,6 +145,14 @@ Constant *make_func_constant(Function *f) {
     return c;
 }
 
+// Vector<Ast *>
+Constant *make_tail_constant(Vector *args) {
+    Constant *c = malloc(sizeof(Constant));
+    c->type = TAIL_TYPE_CONST;
+    c->items = args;
+    return c;
+}
+
 // items ex: (lambda (x y) (+ x y))
 Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env) {
     Constant *c = malloc(sizeof(Constant));

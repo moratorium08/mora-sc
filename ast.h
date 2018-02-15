@@ -49,10 +49,17 @@ typedef struct {
     };
 } Variable;
 
+typedef struct {
+    int evaluating_func_id; // 現在のContextにおいて評価中の関数のid
+    int is_tail; // Contextが末尾文脈か
+    int env_size; // 関数適用を開始したときのenvの大きさ（末尾再帰のとき、ここまで戻る）
+} Context;
+
 typedef enum {
     INTEGER_TYPE_CONST,
     BOOLEAN_TYPE_CONST,
-    FUNCTION_TYPE_CONST
+    FUNCTION_TYPE_CONST,
+    TAIL_TYPE_CONST, // for tail recursion
 } ConstantType;
 
 struct Constant {
@@ -64,6 +71,11 @@ struct Constant {
         int bool_cnt;
         // Type: Function
         Function *func;
+        // Type Tail
+        struct {
+    //      Context ctx;
+            Vector *items;
+        };
     };
 };
 
@@ -103,5 +115,6 @@ Constant *make_boolean_constant(int b);
 Constant *make_func_constant(Function *f);
 Constant *make_func_constant_primitive(SchemeFunc f, int argc);
 Constant *make_lambda_constant(Ast *ast, Vector *args, Vector *env);
+Constant *make_tail_constant(Vector *args); // Vector<Ast *>
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);

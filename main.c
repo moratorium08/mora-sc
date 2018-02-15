@@ -8,12 +8,6 @@
 #include "util.h"
 
 
-typedef struct {
-    int evaluating_func_id; // 現在のContextにおいて評価中の関数のid
-    int is_tail; // Contextが末尾文脈か
-    int env_size; // 関数適用を開始したときのenvの大きさ（末尾再帰のとき、ここまで戻る）
-} Context;
-
 Ast* parser(char *code);
 Constant* evaluate(Application *ap, Vector *env, Context c);
 Constant* eval_ast(Ast *ast, Vector* env, Context c);
@@ -43,6 +37,7 @@ void print_globals() {
         print_ast(map_get(global_variables, key), 0);
     }
 }
+
 
 int main(void) {
     global_variables = make_map(100);
@@ -81,9 +76,11 @@ int main(void) {
     // run("(define (f x) (f x))");
     // run("(f 1)");
     run("(define (fact2 x y) (if (< x 1) 1 (if (< x 2) y (fact2 (- x 1) (modulo (* x y) 65537)))))");
-    run("(fact2 1000 1)");
+    run("(fact2 10000 1)");
     run("(define (fact3 x) (if (< 0 x) (modulo (* x (fact3 (- x 1))) 65537) 1))");
     run("(fact3 1000)");
+    // run("(fact3 10000)"); -> overflow
+
     return 0;
 }
 
@@ -341,20 +338,20 @@ Constant *execute(Vector *items, Context ctx) {
 
         int flag = 1;
         if (ctx.is_tail == 1 && ctx.evaluating_func_id == f->id) {
-            int i;
-            flag = 0;
-            // printf("hoge%d\n", env->len);
-            for (i = 0; i < (env->len - ctx.env_size + 1); i++) {
-                vector_pop(env);
-            }
+            return make_tail_constant(items);
         }
-        start_scope(tuples, env, ctx);
-        ctx.is_tail = 1;
-        ctx.evaluating_func_id = f->id;
-        ctx.env_size = env->len;
-        ret = evaluate(f->ast->ap, env, ctx);
-        if (flag) {
+        while (1) {
+            start_scope(tuples, env, ctx);
+            ctx.is_tail = 1;
+            ctx.evaluating_func_id = f->id;
+            ctx.env_size = env->len;
+            ret = evaluate(f->ast->ap, env, ctx);
             end_scope(env);
+            if (ret->type == TAIL_TYPE_CONST) {
+                tuples = _zip_vectors(arg_names, ret->items);
+            } else {
+                break;
+            }
         }
 
         return ret;
