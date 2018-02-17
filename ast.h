@@ -135,4 +135,5 @@ Constant *make_symbol_constant(char *symbol);
 Constant *get_list_base_instance();
 void print_constant(Constant *c);
 void print_ast(Ast *ast, int indent);
+int is_list(Constant *c);
 #endif

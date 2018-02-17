@@ -10,19 +10,18 @@ int TEST_NEST= 0;
 int TEST_ERROR = 0;
 int TEST_SUCCESS = 0;
 
-void print_spaces(int x) {
+void print_spaces_test(int x) {
     int i = 0;
     for (; i < x; i++) {
         printf(" ");
-    }
-}
+    } }
 
 void fexpect_int(char *filename, int line, int a, int b) {
     if (a == b) {
         TEST_SUCCESS += 1;
         return;
     }
-    print_spaces(TEST_NEST);
+    print_spaces_test(TEST_NEST);
     printf("%s: %d, expect %d but get %d\n", filename, line, a, b);
     TEST_ERROR += 1;
 }
@@ -32,8 +31,13 @@ void fexpect_str(char *filename, int line, char *a, char *b) {
         TEST_SUCCESS += 1;
         return;
     }
-    print_spaces(TEST_NEST);
+    print_spaces_test(TEST_NEST);
     printf("%s: %d, expect %s but get %s\n", filename, line, a, b);
+    TEST_ERROR += 1;
+}
+
+void ferror_msg(char *filename, int line, char *c) {
+    printf("%s: %d, error: %s\n", filename, line, c);
     TEST_ERROR += 1;
 }
 
@@ -46,11 +50,13 @@ void described() {
     TEST_NEST--;
 }
 
-void summary() {
+int summary() {
+    int ret = TEST_ERROR == 0;
     printf("succeeded: %d/%d\n", TEST_SUCCESS, TEST_ERROR + TEST_SUCCESS);
     TEST_ERROR = 0;
     TEST_SUCCESS = 0;
     described();
+    return ret;
 }
 /*
 
