@@ -65,14 +65,14 @@ int main(void) {
 
     run("(define l (cons 1 (cons 2 (cons 3 (list)))))");
     c = run("l");
-    // c = run("(list)");
-    print_constant(c);
+
+    printf("%d\n", is_list(c));
     if (!is_list(c)) {
         error_msg("expect type list");
     } else {
         Constant *top = c->pair->fst;
         expect_c_int(top, 1);
-        if (is_list(c->pair->snd)) {
+        if (!is_list(c->pair->snd)) {
             error_msg("expect type list");
         }
     }
@@ -88,8 +88,32 @@ int main(void) {
     expect_c_int(run("(fact2 10000 1)"), 2296);
     run("(define (fact3 x) (if (< 0 x) (modulo (* x (fact3 (- x 1))) 65537) 1))");
     expect_c_int(run("(fact3 1000)"), 17173);
-    run("(cons 1 2)");
+    c = run("(cons 1 2)");
+    if (c->type != PAIR_TYPE_CONST) {
+        error_msg("expect type pair");
+    } else {
+        expect_c_int(c->pair->fst, 1);
+        expect_c_int(c->pair->snd, 2);
+    }
 
-    run("'(+ '(+ 1) 2)");
+    c = run("'(+ '(+ 1) 2)");
+    if (!is_list(c)) {
+        error_msg("expect type list.");
+    } else {
+        Constant *fst = c->pair->fst;
+        Constant *snd = c->pair->snd;
+        if (strcmp(fst->symbol, "+") != 0) {
+            char buf[1024];
+            sprintf(buf, "expect + but %s.", fst->symbol);
+            error_msg(buf);
+        } else  {
+            if (!is_list(snd)) {
+                error_msg("expect type list");
+            } else {
+                Constant *tmp = snd->pair->snd;
+                expect_c_int(tmp->pair->fst, 2);
+            }
+        }
+    }
     return summary();
 }

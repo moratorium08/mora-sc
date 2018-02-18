@@ -443,7 +443,6 @@ Constant *builtin_cdr(Vector *items) {
     return p->pair->snd;
 }
 Constant *builtin_list(Vector *items) {
-    int n = items->len;
     int i;
     Constant *l = get_list_base_instance();
     for (i = items->len - 1; i >= 1; i--) {
