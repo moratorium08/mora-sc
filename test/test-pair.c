@@ -11,5 +11,5 @@ int main() {
     int *w = p->snd;
     expect_int(*z, x);
     expect_int(*w, y);
-    summary();
+    return summary();
 }
